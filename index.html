@@ -1,0 +1,619 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Voodorm by mardix</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/main.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+
+      <header>
+        <h1>Voodorm</h1>
+        <p>VoodOrm: a fluent SQL query builder on top of PDO. It makes writing queries and CRUD painless. Works well with table relationships</p>
+      </header>
+
+      <div id="banner">
+        <span id="logo"></span>
+
+        <a href="https://github.com/mardix/VoodOrm" class="button fork"><strong>View On GitHub</strong></a>
+        <div class="downloads">
+          <span>Downloads:</span>
+          <ul>
+            <li><a href="https://github.com/mardix/VoodOrm/zipball/master" class="button">ZIP</a></li>
+            <li><a href="https://github.com/mardix/VoodOrm/tarball/master" class="button">TAR</a></li>
+          </ul>
+        </div>
+      </div><!-- end banner -->
+
+    <div class="wrapper">
+      <nav>
+        <ul></ul>
+      </nav>
+      <section>
+        <h1>VoodOrm</h1>
+
+<hr><p>Name: VoodOrm</p>
+
+<p>version: 0.1</p>
+
+<p>License: MIT</p>
+
+<p>Author: <a href="http://github.com/mardix">Mardix</a></p>
+
+<hr><p><em>Documentation is still in construction, please bare with me</em></p>
+
+<hr><h2>About Voodoo!</h2>
+
+<p>VoodOrm is a fluent query builder on top of PDO to query tables in database.
+VoodOrm works nicely with table relationships. Despite its name,
+VoodOrm is not an ORM.</p>
+
+<hr><h2>Features</h2>
+
+<ul>
+<li>PDO and prepared statements</li>
+<li>Fluent Query</li>
+<li>Relationship</li>
+<li>Aggregation</li>
+<li>Active Record pattern</li>
+</ul><h2>Requirements</h2>
+
+<ul>
+<li>PHP 5.3</li>
+<li>PDO</li>
+</ul><h2>What it doesn't do</h2>
+
+<ul>
+<li>ORM : VoodOrm is not an ORM</li>
+<li>Validation : We believe it's best to validate your data at the database level or application level</li>
+</ul><hr><h2>Working with VoodOrm</h2>
+
+<hr><h3>
+<strong><em>new VoodOrm(</em></strong> <em>PDO $pdo</em> <strong><em>)</em></strong>
+</h3>
+
+<p>To get started with VoodOrm, you have to setup the PDO connection. We'll be using the variable $users throughout this whole tutorial</p>
+
+<p><code>
+$pdo = new PDO("mysql:host=localhost;dbname=$dbname", $username, $password);
+$users = new VoodOrm($pdo);
+</code></p>
+
+<hr><h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::table(</em></strong> <em>string $tablename</em> <strong><em>)</em></strong>
+</h3>
+
+<p>To connect to a table is straight forward by calling the method <code>VoodOrm::table()</code> </p>
+
+<p><code>
+$users-&gt;table('users');
+</code></p>
+
+<p>From there you will be able able to do any CRUD on the table with VoodOrm fluent query interface</p>
+
+<hr><h2>Data Modification</h2>
+
+<p>VoodOrm supports data modification (insert, update and delete). No data validation is performed by VoodOrm but all database errors are reported by the standard PDO error reporting. For data validation, we believe it's best to validate your data at the database level or application level</p>
+
+<hr><h3>
+<em>mixed</em> <strong><em>VoodOrm::insert(</em></strong> <em>Array $data</em> <strong><em>)</em></strong>
+</h3>
+
+<p>To insert data in the table, use the <code>insert(Array $data)</code> where <code>$data</code> can be a one dimentional array to insert  just one entry, or a muliple arrays to do mass insert. </p>
+
+<p>If a single row was inserted, it will return the active record of the created object. Otherwise it will return the total entries inserted</p>
+
+<p>For a single entry:</p>
+
+<pre><code>$user = $users-&gt;insert(array(
+                "name" =&gt; "Mardix",
+                "age" =&gt; 30, 
+                "city" =&gt; "Charlotte",
+                "state" =&gt; "NC",
+                "device" =&gt; "mobile",
+                "timestamp" =&gt; $voodorm-&gt;Datetime()
+            ));
+</code></pre>
+
+<p>Returns the VoodOrm active record instance of this entry where you can use
+<code>$user-&gt;name</code> or <code>$user-&gt;city</code>. We'll be able to do more later.</p>
+
+<p>For a mass insert:</p>
+
+<pre><code>$massEntries = $users-&gt;insert(array(
+                    array(
+                         "name" =&gt; "Mardix",
+                         "city" =&gt; "Charlotte",
+                         "state" =&gt; "NC",
+                         "device" =&gt; "mobile",
+                         "timestamp" =&gt; $voodorm-&gt;Datetime()
+                    ),
+                    array(
+                         "name" =&gt; "Cesar",
+                         "city" =&gt; "Atlanta",
+                         "state" =&gt; "GA",
+                         "device" =&gt; "mobile",
+                         "timestamp" =&gt; $voodorm-&gt;Datetime()
+                    ),
+                    array(
+                         "name" =&gt; "Gaga",
+                         "city" =&gt; "Port-au-Prince",
+                         "state" =&gt; "HT",
+                         "device" =&gt; "computer",
+                         "timestamp" =&gt; $voodorm-&gt;Datetime()
+                    ),
+                ));
+</code></pre>
+
+<p>returns the total entries that were inserted</p>
+
+<hr><h3>
+<em>mixed</em> <strong><em>VoodOrm::update(Array $data)</em></strong>
+</h3>
+
+<p>There are two ways to update entries in VoodOrm, 1) by using the active record pattern for a fetched row, or 2) by using a where query to specify where to update. Also the method <code>VoodOrm::set($key, $value)</code> can be use to set the data before updating.</p>
+
+<p><strong><em>For single entry</em></strong></p>
+
+<pre><code>$user-&gt;update(array(
+                    "city" =&gt; "Raleigh"
+                ));
+</code></pre>
+
+<p>it's the same as</p>
+
+<pre><code>$user-&gt;city = "Raleigh";
+$user-&gt;update();
+</code></pre>
+
+<p>You can use <code>save()</code> instead of <code>update()</code></p>
+
+<pre><code>$user-&gt;save();
+</code></pre>
+
+<p>or with <em>Voodoo::set(Array $data) or Voodoo::set($key, $value)</em></p>
+
+<pre><code>$singleEntry-&gt;set('city','Raleigh')-&gt;update();
+</code></pre>
+
+<p><strong><em>For multiple entries:</em></strong></p>
+
+<p>For multiple entries we'll use <code>VoodOrm::set()</code> and <code>VoodOrm::where()</code> to specify where to update.</p>
+
+<p><em>Voodoo::set(Array $data) or Voodoo::set($key, $value)</em></p>
+
+<p>For mass update, we'll set the data to update using <code>set(Array $data)</code> and <code>where($k, $v)</code></p>
+
+<pre><code>$voodorm-&gt;set(array(
+                "country_code" =&gt; "US"
+        ))
+        -&gt;where("device", "mobile")
+        -&gt;update();
+</code></pre>
+
+<p>*<em>There are more fluent <code>where</code> aliases under Fluent Query Interface</em></p>
+
+<hr><h3>
+<em>int</em> <strong><em>VoodOrm::delete()</em></strong>
+</h3>
+
+<p>To delete entries we'll use the <code>VoodOrm::delete()</code> method</p>
+
+<p>For single entries, by invoking the <code>delete()</code> method it will delete the current entry</p>
+
+<pre><code>$singleEntry-&gt;delete();
+</code></pre>
+
+<p>For multiple entries, we will use the <code>VoodOrm::where()</code> method to specify where to delete</p>
+
+<pre><code>$voodorm-&gt;where($x, $y)-&gt;delete();
+</code></pre>
+
+<hr><h2>Aggregation</h2>
+
+<h4>
+<em>int</em> <strong><em>VoodOrm::count()</em></strong>
+</h4>
+
+<p>To count all the entries based on where clause</p>
+
+<pre><code>$count = $voodorm-&gt;where($x, $y)-&gt;count();
+</code></pre>
+
+<p>or for a specific column name</p>
+
+<pre><code>$count = $voodorm-&gt;where($x, $y)-&gt;count($columnName);
+</code></pre>
+
+<h4>
+<em>float</em> <strong><em>VoodOrm::max(</em></strong> <em>string $columnName</em> <strong><em>)</em></strong>
+</h4>
+
+<p>To get the max of a $columnName based on where() clause</p>
+
+<pre><code>$max = $voodorm-&gt;where($x, $y)-&gt;max($columnName);
+</code></pre>
+
+<h4>
+<em>float</em> <strong><em>VoodOrm::min(</em></strong> <em>string $columnName</em> <strong><em>)</em></strong>
+</h4>
+
+<p>To get the min of a $columnName based on where() clause</p>
+
+<pre><code>$min = $voodorm-&gt;where($x, $y)-&gt;min($columnName);
+</code></pre>
+
+<h4>
+<em>float</em> <strong><em>VoodOrm::sum(</em></strong> <em>string $columnName</em> <strong><em>)</em></strong>
+</h4>
+
+<p>To get the sum of a $columnName based on where() clause</p>
+
+<pre><code>$sum = $voodorm-&gt;where($x, $y)-&gt;sum($columnName);
+</code></pre>
+
+<h4>
+<em>float</em> <strong><em>VoodOrm::avg(</em></strong> <em>string $columnName</em> <strong><em>)</em></strong>
+</h4>
+
+<p>To get the average of a $columnName based on where() clause</p>
+
+<pre><code>$avg = $voodorm-&gt;where($x, $y)-&gt;avg($columnName);
+</code></pre>
+
+<hr><h2>Querying</h2>
+
+<p>VoodOrm provides a fluent interface to enable simple queries to be built without writing a single character of SQL. </p>
+
+<p>Two main methods allow you to get a single entry or multiple entries. </p>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::findOne()</em></strong>
+</h3>
+
+<p><code>findOne()</code> returns <code>VoodOrm</code> instance of a single entry if found, otherwise it will return <code>FALSE</code>.</p>
+
+<pre><code>$user = $users-&gt;where('id',1234)
+              -&gt;findOne();
+</code></pre>
+
+<p>The primary key can be set in the <code>findOne(int $primaryKey)</code> to get the same result as the above query. Meaning no need to have a <code>where()</code> clause.</p>
+
+<pre><code>$user = $users-&gt;findOne(1234);
+</code></pre>
+
+<p>Let's get the entry found:</p>
+
+<pre><code>if ($user) {
+    echo " Hello $user-&gt;name!";
+
+// You can do VoodOrm 
+    $user-&gt;last_viewed = $users-&gt;DateTime();
+    $suer-&gt;save();
+}
+</code></pre>
+
+<h3>
+<em>ArrayIterator</em> <strong><em>VoodOrm::find()</em></strong>
+</h3>
+
+<p><code>find()</code> returns an <code>ArrayIterator</code> of the rows found which are instances of <code>VoodOrm</code>, otherwise it will return <code>False</code>. </p>
+
+<pre><code>$allUsers = $users-&gt;where('gender', 'male')
+                  -&gt;find();
+
+foreach ($allUsers as $user) {
+    echo "{$user-&gt;name}";
+
+    $user-&gt;last_viewed = $users-&gt;DateTime();
+    $suer-&gt;save();
+}
+</code></pre>
+
+<p><code>find()</code> also contains a shortcut when it's called in an iteration such as foreach:</p>
+
+<pre><code>$allUsers = $users-&gt;where('gender', 'male');
+
+foreach ($allUsers as $user) {
+    echo "{$user-&gt;name}";
+
+    $user-&gt;last_viewed = $users-&gt;DateTime();
+    $suer-&gt;save();
+}
+</code></pre>
+
+<p><code>find(Closure $callback)</code> </p>
+
+<hr><h2>Fluent Query Builder</h2>
+
+<hr><p>To select the fields in the table. If ommitted, VooOrm will fetch all the columns.</p>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::select(</em></strong> <em>$columns = '\</em>'*  <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;select()
+</code></pre>
+
+<p>or with selected columns</p>
+
+<pre><code>$users-&gt;select("name, age, last_viewed");
+
+SELECT name, age, last_viewed
+</code></pre>
+
+<hr><h2>Where</h2>
+
+<p><code>Where</code> allow you to set where clauses for the query. Below you will find many aliases for <code>where</code></p>
+
+<p><code>Where</code> clauses work with VoodOrm::find()<code>,</code>VoodOrm::findOne()<code>,</code>VoodOrm::update()<code>and</code>VoodOrm::delete()`</p>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::where(</em></strong> <em>$key, $value</em>  <strong><em>)</em></strong>
+</h3>
+
+<p>This is the main <code>where</code>. (more to be written)</p>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::wherePK(</em></strong> <em>int $primaryKey</em>  <strong><em>)</em></strong>
+</h3>
+
+<p>Where the primary key is set
+    $users-&gt;wherePK(1234);</p>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::whereNot(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;whereNot('age', 24);
+
+WHERE age != ?
+</code></pre>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::whereLike(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;whereLike('name', 'w%');
+
+WHERE name LIKE ?
+</code></pre>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::whereNotLike(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;whereNotLike('name', 'r%');
+
+WHERE name NOT LIKE ?
+</code></pre>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::whereGt(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;whereGt('age', 21);
+
+WHERE age &gt; ?
+</code></pre>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::whereGte(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;whereGte('age', 21);
+
+WHERE age &gt;= ?
+</code></pre>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::whereLt(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;whereLt('age', 21);
+
+WHERE age &lt; ?
+</code></pre>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::whereLte(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;whereLte('age', 21);
+
+WHERE age &lt;= ?
+</code></pre>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::whereIn(</em></strong> <em>$columnName, Array $value</em>  <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;whereIn('city', array('Charlotte', 'Atlanta'));
+
+WHERE city IN (?,?)
+</code></pre>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::whereNotIn(</em></strong> <em>$columnName, Array $value</em>  <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;whereNotIn('city', array('Chicago', 'Miami'));
+
+WHERE city NOT IN (?,?)
+</code></pre>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::whereNull(</em></strong> <em>$columnName</em>  <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;whereNull('city');
+
+WHERE city IS NULL
+</code></pre>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::whereNotNull(</em></strong> <em>$columnName</em>  <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;whereNotNull('name');
+
+WHERE city NOT NULL
+</code></pre>
+
+<hr><h2>Where with OR and AND</h2>
+
+<p>Building your query, you will want to add AND and OR operator in your where clause. To do so, use <code>VoodOrm::_and()</code> and <code>VoodOrm::_or()</code> chained to any <code>where</code> aliases</p>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::_and()</em></strong>
+</h3>
+
+<p>To add the <code>AND</code> operator in a where query. <code>AND</code> is set by default, if not <code>_and()</code> is not called, VoodOrm will add it by default. </p>
+
+<pre><code>$users-&gt;where("city", "Charlotte")-&gt;_and()-&gt;whereGte("age", 21);
+
+WHERE city = ? AND age &gt;= ?
+</code></pre>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::_or()</em></strong>
+</h3>
+
+<p>To add the <code>OR</code> operator in a where query.</p>
+
+<pre><code>$users-&gt;where("city", "Charlotte")-&gt;_or()-&gt;whereGte("age", 21)-&gt;_or()-&gt;where("gender", "female");
+
+WHERE city = ? OR age &gt;= ? OR gender = ?
+</code></pre>
+
+<hr><h2>Where with WRAP()</h2>
+
+<p>When building quasi complicated query with multiple set of where, <code>VoodOrm::wrap()</code> group the where together in parenthesis. </p>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::wrap()</em></strong>
+</h3>
+
+<pre><code>$users-&gt;where("city", "Charlotte")-&gt;whereGte("age", 21)-&gt;wrap()
+      -&gt;where("gender", "female")-&gt;where("city", "Atlanta");
+
+WHERE (city = ? AND age &gt;= ?) AND (gender = ? AND city = ?)
+</code></pre>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::wrap()-&gt;_and()</em></strong>
+</h3>
+
+<p><code>wrap()-&gt;_and()</code> does a union with another grouped where with the <code>AND</code> operator.</p>
+
+<pre><code>$users-&gt;where("city", "Charlotte")-&gt;whereGte("age", 21)-&gt;wrap()-&gt;_and()
+      -&gt;where("gender", "female")-&gt;where("city", "Atlanta");
+
+WHERE (city = ? AND age &gt;= ?) AND (gender = ? AND city = ?)
+</code></pre>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::wrap()-&gt;_or()</em></strong>
+</h3>
+
+<p><code>wrap()-&gt;_or()</code> does a union with another grouped where with the <code>OR</code> operator.</p>
+
+<pre><code>$users-&gt;where("city", "Charlotte")-&gt;whereGte("age", 21)-&gt;wrap()-&gt;_or()
+      -&gt;where("gender", "female")-&gt;where("city", "Atlanta");
+
+WHERE (city = ? AND age &gt;= ?) OR (gender = ? AND city = ?)
+</code></pre>
+
+<h4>wrap()-&gt;_and() and wrap()-&gt;_or() in the same query</h4>
+
+<pre><code>$users-&gt;where("id",1)-&gt;where("city","charlotte")-&gt;wrap()
+      -&gt;where("gender","female")-&gt;where("country","US")-&gt;wrap()
+      -&gt;_or()-&gt;where("city",array("Charlotte","Atlanta"))-&gt;wrap()
+      -&gt;_or()-&gt;whereLt('age',21)-&gt;whereGte("name","Mardix")-&gt;wrap();
+
+WHERE (id = ? AND city = ?) 
+      AND (gender = ? AND country = ?) 
+      OR ((city IN (?, ?))) 
+      OR (age &lt; ? AND name &gt;= ?) 
+</code></pre>
+
+<hr><h2>Order, Group, Limit, Offset</h2>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::orderBy(</em></strong> <em>$columnName, $ordering</em>  <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;orderBy('name', 'DESC');
+
+ORDER BY name DESC
+</code></pre>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::groupBy(</em></strong> <em>$columnName, $ordering</em>  <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;groupBy('city');
+
+GROUP BY city
+</code></pre>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::limit(</em></strong> <em>int $limit</em>  <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;limit(10);
+
+LIMIT 10
+</code></pre>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::offset(</em></strong> <em>int $offset</em>  <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;offset(10);
+
+OFFSET 10
+</code></pre>
+
+<hr><h2>Joins</h2>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::join(</em></strong> <em>$tablename, $constraint, $table_alias , $join_operator</em> <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;join('friends', 'f.user_id = u.id', 'f')
+
+JOIN friends AS f ON f.user_id = u.id
+</code></pre>
+
+<h3>
+<em>VoodOrm</em> <strong><em>VoodOrm::leftJoin(</em></strong> <em>$tablename, $constraint, $table_alias</em> <strong><em>)</em></strong>
+</h3>
+
+<pre><code>$users-&gt;leftJoin('friends', 'f.user_id = u.id', 'f')
+
+LEFT JOIN friends AS f ON f.user_id = u.id
+</code></pre>
+
+<hr><h2>Relationship</h2>
+
+<p>to be added</p>
+      </section>
+      <footer>
+        <p>Project maintained by <a href="https://github.com/mardix">mardix</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="http://twitter.com/#!/michigangraham">mattgraham</a></small></p>
+      </footer>
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+    
+  </body>
+</html>
