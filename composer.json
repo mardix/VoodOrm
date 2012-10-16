@@ -1,8 +1,8 @@
 {
     "name": "voodoophp/voodorm",
     "type": "library",
-    "description": "VoodOrm: a fluent query builder on top of PDO to query tables in database. Featured PDO, Fluent Query Interface, Active Record Pattern, aggregation ",
-    "keywords": ["pdo","fluent query","pdo","mysql","sqlite","postgresql"],
+    "description": "VoodOrm is a micro-ORM which functions as both a fluent select query API and a CRUD model class.",
+    "keywords": ["pdo","fluent query","pdo","mysql","sqlite","postgresql","orm"],
     "homepage": "https://github.com/mardix/VoodOrm",
     "license": "MIT",
     "authors": [
