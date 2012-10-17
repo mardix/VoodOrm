@@ -33,7 +33,7 @@ use ArrayIterator,
 class VoodOrm implements IteratorAggregate
 {
     const NAME              = "VoodOrm";
-    const VERSION           = "0.2";
+    const VERSION           = "0.3";
 
     // RELATIONSHIP CONSTANT
     const REL_HASONE        =  1;       // OneToOne. Eager Load data
@@ -75,7 +75,7 @@ class VoodOrm implements IteratorAggregate
 
     private $group_by = array();
 
-    private $where_values = array();
+    private $where_parameters = array();
 
     private $where_conditions = array();
     
@@ -90,11 +90,18 @@ class VoodOrm implements IteratorAggregate
     private $pdo_executed = false;
 
     private $_data = array();
+    
+    private $debug_sql_query = false;
+    
+    private $sql_query = "";
+    
+    private $sql_parameters = array();
 
     private $_dirty_fields = array();
 
     private static $references = array();
-    private static $queryProfiler = array();
+    
+    private $query_profiler = array();
 
     // Table structure
     public $table_structure = array(
@@ -170,33 +177,38 @@ class VoodOrm implements IteratorAggregate
      */
     public function query($query, Array $parameters = array(), $is_fluent_query = true)
     {
-        $_stime = microtime(true);
+        $this->sql_parameters = $parameters;
+        $this->sql_query = $query;
+        
+        if ($this->debug_sql_query) {
+            return false;
+        } else {
+            $_stime = microtime(true);
 
-        $this->pdoStmt = $this->pdo->prepare($query);
+            $this->pdoStmt = $this->pdo->prepare($query);
 
-        $this->pdo_executed = $this->pdoStmt->execute($parameters);
+            $this->pdo_executed = $this->pdoStmt->execute($parameters);
 
-        $_time = microtime(true) - $_stime;
+            $_time = microtime(true) - $_stime;
 
-        // query profiler
+            // query profiler
+            if (!isset($this->$this->query_profiler["total_time"])){
+                $this->query_profiler["total_time"] = 0;
+            }
 
-        if (!isset(self::$queryProfiler["total_time"])){
-            self::$queryProfiler["total_time"] = 0;
+            $this->query_profiler[] = array(
+                "query"         => $query,
+                "params"        => $parameters,
+                "affected_rows" => $this->rowCount(),
+                "time"          => $_time
+            );
+
+            $this->query_profiler["total_time"] = $this->query_profiler["total_time"] + $_time;
+
+            $this->is_fluent_query = $is_fluent_query;
+
+            return $this->is_fluent_query ? $this : $this->pdo_executed;            
         }
-
-        self::$queryProfiler[] = array(
-            "query"         => $query,
-            "params"        => $parameters,
-            "affected_rows" => $this->rowCount(),
-            "time"          => $_time
-        );
-
-        self::$queryProfiler["total_time"] = self::$queryProfiler["total_time"] + $_time;
-
-        $this->is_fluent_query = $is_fluent_query;
-
-        return $this->is_fluent_query ? $this : $this->pdo_executed;
-
     }
 
     /**
@@ -214,25 +226,6 @@ class VoodOrm implements IteratorAggregate
                                 Querying
 *-----------------------------------------------------------------------------*/
     /**
-     * Return one row
-     *
-     * @param  int      $id - use to fetch by primary key
-     * @return Voodoo\Core\VoodOrm 
-     */
-    public function findOne($id = null)
-    {
-        if ($id){
-            $this->wherePK($id);
-        }
-
-        $this->limit(1);
-
-        $findAll = $this->find();
-
-        return $findAll->valid() ? $findAll->offsetGet(0) : false;
-    }
-
-    /**
      * To find all rows and create their instances
      * Use the query builder to build the where clause or $this->query with select
      * If a callback function is provided, the 1st arg must accept the rows results
@@ -249,27 +242,55 @@ class VoodOrm implements IteratorAggregate
         $map = array();
 
         if($this->is_fluent_query){
-            $this->query($this->getSelectQuery(), $this->getWhereValues());
+            $this->query($this->getSelectQuery(), $this->getWhereParameters());
         }
-        if ($this->pdo_executed == true) {
+        
+        //Debug SQL Query
+        if ($this->debug_sql_query) {
+            $this->debugSqlQuery(false);
+            return false;
+        } else {
+            if ($this->pdo_executed == true) {
+                $this->reset();
+                $this->allRows = $this->pdoStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $this->reset();
-
-            $this->allRows = $this->pdoStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            if (is_callable($callback)) {
-               return $callback($this->allRows);
+                if (is_callable($callback)) {
+                    return $callback($this->allRows);
+                } else {
+                    $that = $this;
+                    $map = array_map(function($r) use ($that) {
+                                return $that->_toRow($r);
+                            }, $this->allRows);                    
+                }
             }
-
-            $that = $this;
-            $map = array_map(function($r) use ($that) {
-                        return $that->_toRow($r);
-                    }, $this->allRows);
+            return new ArrayIterator($map);            
+        }      
+    }
+    
+    /**
+     * Return one row
+     *
+     * @param  int      $id - use to fetch by primary key
+     * @return Voodoo\Core\VoodOrm 
+     */
+    public function findOne($id = null)
+    {
+        if ($id){
+            $this->wherePK($id);
         }
 
-        return new ArrayIterator($map);
+        $this->limit(1);
+        
+        // Debug the SQL Query
+        if ($this->debug_sql_query) {
+            $this->find();
+            return false;
+        } else {
+            $findAll = $this->find();
+            return $findAll->valid() ? $findAll->offsetGet(0) : false;
+        }
     }
-
+    
     /**
      * This method allow the iteration inside of foreach()
      *
@@ -577,11 +598,10 @@ class VoodOrm implements IteratorAggregate
      * @param  string   $ordering   (DESC | ASC)
      * @return Voodoo\Core\VoodOrm 
      */
-    protected function orderBy($columnName, $ordering="")
+    protected function orderBy($columnName, $ordering = "")
     {
         $this->is_fluent_query = true;
         $this->order_by[] = "{$columnName} {$ordering}";
-
         return $this;
     }
 
@@ -595,7 +615,6 @@ class VoodOrm implements IteratorAggregate
     {
         $this->is_fluent_query = true;
         $this->group_by[] = $columnName;
-
         return $this;
     }
 
@@ -607,7 +626,7 @@ class VoodOrm implements IteratorAggregate
      * @param  int      $offset
      * @return Voodoo\Core\VoodOrm 
      */
-    public function limit($limit,$offset = null)
+    public function limit($limit, $offset = null)
     {
         $this->is_fluent_query = true;
         $this->limit = $limit;
@@ -629,7 +648,6 @@ class VoodOrm implements IteratorAggregate
     {
         $this->is_fluent_query = true;
         $this->offset = $offset;
-
         return $this;
     }
 
@@ -643,16 +661,18 @@ class VoodOrm implements IteratorAggregate
      * @param  string   $join_operator - LEFT | INNER | etc...
      * @return Voodoo\Core\VoodOrm 
      */
-    public function join($table, $constraint, $table_alias="", $join_operator="")
+    public function join($table, $constraint, $table_alias = "", $join_operator = "")
     {
         $this->is_fluent_query = true;
 
         if($table instanceof VoodOrm){
             $table = $table->table_name;
         }
-        
-        $this->join_sources[] = "{$join_operator} JOIN {$table} {$table_alias} ON {$constraint}";
-
+        $join  = $join_operator ? "{$join_operator} " : "";
+        $join .= "JOIN {$table} ";
+        $join .= $table_alias ? "{$table_alias} " : "";
+        $join .= "ON {$constraint}";
+        $this->join_sources[] = $join;
         return $this;
     }
 
@@ -682,8 +702,10 @@ class VoodOrm implements IteratorAggregate
         
         $result_columns = implode(", ", $columns);
 
-        $query = "SELECT {$result_columns} FROM {$this->table_name} {$this->table_alias} ";
+        $query = "SELECT {$result_columns} FROM {$this->table_name}";
 
+            $query .= ($this->table_alias) ? " AS {$this->table_alias}" : "";
+            
         if(count($this->join_sources)){
             $query .= implode(" ",$this->join_sources);
         }
@@ -713,8 +735,8 @@ class VoodOrm implements IteratorAggregate
     {
         // If there are no WHERE clauses, return empty string
         if (!count($this->where_conditions)) {
-            return " WHERE 1 ";
-        }
+            return " WHERE 1";
+        } 
 
         $where_condition = "";
         $last_condition = "";
@@ -725,14 +747,14 @@ class VoodOrm implements IteratorAggregate
                     $where_condition .= $condition["OPERATOR"];
                 }
                 $where_condition .= $condition["STATEMENT"];
-                $this->where_values = array_merge($this->where_values, $condition["PARAMS"]);
+                $this->where_parameters = array_merge($this->where_parameters, $condition["PARAMS"]);
             } else {
                 $where_condition .= $condition;
             }
             $last_condition = $condition;
         }
 
-        return " WHERE {$where_condition} " ;
+        return " WHERE {$where_condition}" ;
     }
 
     /**
@@ -740,9 +762,9 @@ class VoodOrm implements IteratorAggregate
      *
      * @return Array
      */
-    private function getWhereValues()
+    protected function getWhereParameters()
     {
-        return $this->where_values;
+        return $this->where_parameters;
     }
 
     /**
@@ -767,7 +789,7 @@ class VoodOrm implements IteratorAggregate
     protected function resetWhere()
     {
         $this->where_conditions = array();
-        $this->where_values = array();
+        $this->where_parameters = array();
         return $this;
     }  
     
@@ -806,8 +828,14 @@ class VoodOrm implements IteratorAggregate
         $sql = "INSERT INTO {$this->table_name} (" . implode(",", $datafield ) . ")
                 VALUES " . implode(',', $question_marks);
 
-        $this->query($sql,$insert_values,false);
+        $q = $this->query($sql,$insert_values,false);
 
+        // Return the SQL Query
+        if ($this->debug_sql_query) {
+            $this->debugSqlQuery(false);
+            return false;
+        }
+                
         $rowCount = $this->rowCount();
 
         if ($rowCount == 1) {
@@ -850,14 +878,18 @@ class VoodOrm implements IteratorAggregate
         $query .= implode(", ",$field_list);
         $query .= $this->getWhereString();
 
-        $values = $values + $this->getWhereValues();
+        $values = array_merge($values, $this->getWhereParameters());
 
-        $this->query($query,$values,false);
-
-        $this->_dirty_fields = array();
-
-        return $this->rowCount();
-
+        $this->query($query, $values, false);
+        
+        // Return the SQL Query
+        if ($this->debug_sql_query) {
+            $this->debugSqlQuery(false);
+            return false;
+        } else {
+            $this->_dirty_fields = array();
+            return false;            
+        }
     }
 
 /*------------------------------------------------------------------------------
@@ -874,9 +906,15 @@ class VoodOrm implements IteratorAggregate
         $query  = "DELETE FROM {$this->table_name} ";
         $query .= $this->getWhereString();
 
-        $this->query($query, array($this->getPK()), false);
-
-        return $this->rowCount();
+        $q = $this->query($query, $this->getWhereParameters(), false);
+        
+        // Return the SQL Query
+        if ($this->debug_sql_query) {
+            $this->debugSqlQuery(false);
+            return false;
+        } else {
+           return $this->rowCount(); 
+        }
     }
     
 /*------------------------------------------------------------------------------
@@ -1249,7 +1287,7 @@ class VoodOrm implements IteratorAggregate
      */
     public function reset()
     {
-        $this->where_values = array();
+        $this->where_parameters = array();
         $this->select_fields = array('*');
         $this->join_sources = array();
         $this->where_conditions = array();
@@ -1263,6 +1301,7 @@ class VoodOrm implements IteratorAggregate
         $this->where_operator = self::WHERE_OPERATOR_AND;
         $this->wrap_open = false;
         $this->last_wrap_position = 0;
+        $this->debug_sql_query = false;
         return $this;
     }
 
@@ -1276,16 +1315,53 @@ class VoodOrm implements IteratorAggregate
         return date("Y-m-d H:i:s");
     }
 
+
+
+/*******************************************************************************/
+// Query Debugger
+    
+    /**
+     * To debug the query. It will not execute it but instead using debugSqlQuery()
+     * and getSqlParameters to get the data
+     * 
+     * @param bool $bool
+     * @return Voodoo\Core\VoodOrm 
+     */
+    public function debugSqlQuery($bool = true)
+    {
+        $this->debug_sql_query = $bool;
+        return $this;
+    }
+    
+    /**
+     * Get the SQL Query with 
+     * 
+     * @return string 
+     */
+    public function getSqlQuery()
+    {
+        return $this->sql_query;
+    }
+    
+    /**
+     * Return the parameters of the SQL
+     * 
+     * @return array
+     */
+    public function getSqlParameters()
+    {
+        return $this->sql_parameters;
+    }
+    
     /**
      * To profile all queries that have been executed
      *
      * @return Array
      */
-    public static function QueryProfiler()
+    public function getQueryProfiler()
     {
-        return self::$queryProfiler;
+        return $this->query_profiler;
     }
-
 /*******************************************************************************/
     /**
      * Return a string containing the given number of question marks,
@@ -1294,7 +1370,7 @@ class VoodOrm implements IteratorAggregate
      * @param int - total of placeholder to inser
      * @return string
      */
-    private function makePlaceholders($number_of_placeholders=1)
+    protected function makePlaceholders($number_of_placeholders=1)
     {
         return implode(", ", array_fill(0, $number_of_placeholders, "?"));
     }
@@ -1306,7 +1382,7 @@ class VoodOrm implements IteratorAggregate
      * @param  string $tableName
      * @return string
      */
-    private function formatTableKeyName($pattern,$tableName)
+    protected function formatTableKeyName($pattern, $tableName)
     {
        return sprintf($pattern,$tableName);
     }
@@ -1318,7 +1394,7 @@ class VoodOrm implements IteratorAggregate
      * @param  type   $suffix
      * @return string
      */
-    private function tokenize($key,$suffix="")
+    private function tokenize($key, $suffix = "")
     {
         return  $this->table_token.$key.$suffix;
     }
