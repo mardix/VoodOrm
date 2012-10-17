@@ -5,7 +5,7 @@
 
 Name: VoodOrm
 
-version: 0.2.x
+version: 0.3
 
 License: MIT
 
@@ -33,6 +33,7 @@ VoodOrm works easily with table relationship. And offers api that gets SQL out o
 - Relationship
 - Joins
 - Aggregation
+- Query debugger and query profiler
 - Active Record pattern
 
 ## Requirements
@@ -157,7 +158,7 @@ You can use `save()` instead of `update()`
 
 or with *Voodoo::set(Array $data) or Voodoo::set($key, $value)*
 
-	$singleEntry->set('city','Raleigh')->update();
+	$user->set('city','Raleigh')->update();
 
 ***For multiple entries:***
 
@@ -167,7 +168,7 @@ For multiple entries we'll use `VoodOrm::set()` and `VoodOrm::where()` to specif
 
 For mass update, we'll set the data to update using `set(Array $data)` and `where($k, $v)`
 
-	$voodorm->set(array(
+	$user->set(array(
 					"country_code" => "US"
 			))
 			->where("device", "mobile")
@@ -551,10 +552,20 @@ When building quasi complicated query with multiple set of where, `VoodOrm::wrap
 ---
 
 ## Relationship
-
+in construction
 
 ## Advanced
-to be added
+in construction
+
+## Table Structure
+in construction
+
+## Debugger
+in construction
+
+## Query Profiler
+in construction
+
 
 
 
