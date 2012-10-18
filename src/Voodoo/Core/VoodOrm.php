@@ -825,10 +825,10 @@ class VoodOrm implements IteratorAggregate
             $insert_values = array_values($data);
         }
 
-        $sql = "INSERT INTO {$this->table_name} (" . implode(",", $datafield ) . ")
-                VALUES " . implode(',', $question_marks);
+        $sql = "INSERT INTO {$this->table_name} (" . implode(",", $datafield ) . ") ";
+        $sql .= "VALUES " . implode(',', $question_marks);
 
-        $q = $this->query($sql,$insert_values,false);
+        $this->query($sql,$insert_values,false);
 
         // Return the SQL Query
         if ($this->debug_sql_query) {
@@ -903,7 +903,7 @@ class VoodOrm implements IteratorAggregate
      */
     public function delete()
     {
-        $query  = "DELETE FROM {$this->table_name} ";
+        $query  = "DELETE FROM {$this->table_name}";
         $query .= $this->getWhereString();
 
         $q = $this->query($query, $this->getWhereParameters(), false);
