@@ -5,14 +5,11 @@
 
 Name: VoodOrm
 
-version: 0.3
+version: 0.3.x
 
 License: MIT
 
 Author: [Mardix](http://github.com/mardix)
-
----
-*Documentation is still in construction, please bare with me*
 
 ---
 
@@ -552,20 +549,218 @@ When building quasi complicated query with multiple set of where, `VoodOrm::wrap
 ---
 
 ## Relationship
-in construction
+That's the killer!
 
-## Advanced
-in construction
+One of VoodOrm killer feature is Relationship. By calling q table as a method on an object automatically creates a One To Many relationship on that reference table by default.
+
+For this example we'll have two tables: `user` (id, name, dob) and `friend` (id, user\_id, friend\_id)
+
+The `friend.user_id` is the foreign key to the `user` table. And `friend.friend_id` is the foreign key of the friend's `user.id`.
+
+Let's get all the users and their friends
+
+    $allUsers = $users->find();
+	
+    foreach ($allUsers as $user) {
+        /**
+        * Connect to the 'friend' table = $user->friend();
+        * In the back, it does a ONE To MANY relationship 
+        * SELECT * FROM friend WHERE friend.user_id = user.id 
+        */
+        $allFriends = $user->friend();
+        foreach ($allFriends as $friend) {
+            echo "{$friend->friend_id} : ";
+
+            /**
+            * We got the friend's entry, we want to go back in the user table
+            * So we link back the friend table to the user table
+            * SELECT * FROM user WHERE user.id = friend.friend_id LIMIT 1 
+            * It will do a ONE to One relationship
+            */
+            echo $friend->user(Voodoo\Core\VoodOrm::REL_HASONE, "friend_id")->name;
+
+            echo "\n";
+        }
+    }
+    
+    // Same as above but with just one user
+    $user = $users->findOne($userId);
+    if($user) {
+
+        foreach ($user->friend() as $friend) {
+
+            echo "{$friend->friend_id} : ";
+
+            echo $friend->user(Voodoo\Core\VoodOrm::REL_HASONE, "friend_id")->name;
+
+            echo "\n";
+        }
+    }
+
+
+
+
+That's the big picture. Calling a reference table as a method on a object will do a relationship. 
+
+## Relationship: *One to Many*
+
+One to many relationship, in our user and friend case, it's where a user can have one or more friends. But each `friend.friend_id` is associated to one `user.id`. This type of relationship will return one or more entries. 
+
+The relationship between `user` (single-valued) and `friend` (multi-valued) is a one-to-many relationship. 
+
+In our above example, we did a One to Many relationship in the friend's table
+
+	$allFriends = $user->friend();
+
+Relationship Constants
+
+VoodOrm has pre-defined constant that let you select execute a type of relationship
+
+*CONST::REL\_HASMANY (2)*
+
+	$allFriends = $user->friend(Voodoo\Core\VoodOrm::REL_HASMANY);
+
+This is faster. It does an eager loading by fetching all the data and hold the data in memory. It executes only one query. It is used by default.
+
+
+*CONST::REL\_LAZYMANY (-2)*
+
+	$allFriends = $user->friend(Voodoo\Core\VoodOrm::REL_LAZYMANY);
+
+This is slower. It does a lazy loading by fetching the data as it's being requested. It will execute 1+N queries.
+
+
+
+## Relationship: *One to One*
+One-to-one relationships are single-valued in both directions. In the friend's table, `friend.friend_id` is linked to `user.id`  
+
+	$allFriends = $user->friend();
+
+Relationship Constants
+
+*CONST::REL\_HASONE (1)*
+
+	$friendUser = $friend->user(Voodoo\Core\VoodOrm::REL_HASONE, "friend_id");
+	echo $friendUser->name;
+
+It does an eager loading by fetching all the data and hold the data in memory. It executes only one query. It is used by default.
+
+*CONST::REL\_LAZYONE (-1)*
+
+	$friendUser = $friend->user(Voodoo\Core\VoodOrm::REL_LAZYONE, "friend_id");
+	echo $friendUser->name;
+
+This is slower. It does a lazy loading by fetching the data as it's being requested. It will execute 1+N queries.
+
+
+
+#### Relationship: *Many to Many*
+Not implemented. That shit is complicated.... can't find a one case fit all... 
+
+## Relationship Parameters
+
+VoodOrm relationship accept 4 types of parameters that can be placed anywhere:
+
+	$user->friend(NUMBER, STRING, ARRAY, CALLBACK);
+
+**NUMBER** : Usually that's the relationship constants `REL_HASONE = 1`, `REL_LAZYONE = -1`, `RE_HASMANY = 1`, `REL_LAZYMANY = -1`;
+
+	$user->friend(Voodoo\Core\VoodOrm::REL_HASMANY);
+
+**STRING**: Having a tring as an argument will be used as a foreign key name
+
+	$user->friend("friend_id");
+	
+
+**ARRAY** : Array will be used as a WHERE condition. Array must be a key/value matching the fields in the table
+
+	$user->friend(array(
+		"friendship_start_time >= " => date("Y-m-d")
+	));
+
+**CALLBACK**: Callback is a function to run on the results
+
+	$user->friend(function($data){
+
+		$tableData = array();
+
+		foreach($data as $d) {
+			$tableData[] = array_merge(
+								$data,
+								array("visits_count"=>$d[visits_count] + 1)
+							); 
+		}
+		return $tableData;
+	}); 
+
+Now do the Pot Pourri!
+
+	$user->friend(Voodoo\Core\VoodOrm::REL_HASONE, 
+
+					"friend_id", 
+
+					array("friendship_start_time >= " => date("Y-m-d"),
+
+					function($data){
+					
+							$tableData = array();
+					
+							foreach($data as $d) {
+								$tableData[] = array_merge(
+													$data,
+													array("visits_count"=>$d[visits_count] + 1)
+												); 
+							}
+							return $tableData;
+						}			
+	));
+
+
+
+	$user->friend(NUMBER, STRING, ARRAY, CALLBACK);
+
+---
 
 ## Table Structure
-in construction
 
-## Debugger
-in construction
+Table structure allows to define the table structure in the database. It is set on the constructor
 
-## Query Profiler
-in construction
+	new VoodOrm(PDO, $primaryKey = 'id', $foreignKey = '%s_id', $tablePrefix = '')
+
+PRIMARYKEY : by default is set to `id` but can be anything
+
+FOREIGNKEY : Is the foreign key. By default it is set %s_id where %s is the table name. So a table user, in a friend table the foreign key will be `user_id`
+
+TABLEPREFIX : The table prefix
+
+You can pass an array in the second param to set the table structure
+
+	new VoodOrm(PDO, array(
+        "primaryKeyName"    => "id",
+        "foreignKeyName"    => "%s_id",
+        "tablePrefix"       => ""
+      ));
+
+---
+## Advanced
+
+to be added...
 
 
+---	
+Credits
 
+Thanx to NotORM and Idiorm. They inspired me to make VoodOrm. 
+
+---
+
+Contributers 
+
+If you would like to contribute, thank you for your interest. Please do a pull request.
+
+---
+
+Coding style
+
+VoodOrm follows closely PSR-2
 
