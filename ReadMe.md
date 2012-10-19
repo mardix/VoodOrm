@@ -663,7 +663,7 @@ VoodOrm relationship accept 4 types of parameters that can be placed anywhere:
 
 	$user->friend(NUMBER, STRING, ARRAY, CALLBACK);
 
-**NUMBER** : Usually that's the relationship constants `REL_HASONE = 1`, `REL_LAZYONE = -1`, `RE_HASMANY = 1`, `REL_LAZYMANY = -1`;
+**NUMBER** : Usually that's the relationship constants `REL_HASONE = 1`, `REL_LAZYONE = -1`, `RE_HASMANY = 2`, `REL_LAZYMANY = -2`;
 
 	$user->friend(Voodoo\Core\VoodOrm::REL_HASMANY);
 
