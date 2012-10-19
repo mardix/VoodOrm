@@ -33,7 +33,7 @@ use ArrayIterator,
 class VoodOrm implements IteratorAggregate
 {
     const NAME              = "VoodOrm";
-    const VERSION           = "0.3";
+    const VERSION           = "0.3.1";
 
     // RELATIONSHIP CONSTANT
     const REL_HASONE        =  1;       // OneToOne. Eager Load data
@@ -1128,17 +1128,20 @@ class VoodOrm implements IteratorAggregate
              * tablename(INT REL_TYPE, STRING foreign_key_name, ARRAY $whereArgs)
              */
             do {
-                if(($args[0] === self::REL_HASONE) || ($args[0] === self::REL_LAZYONE) ||
-                    ($args[0] === self::REL_HASMANY) || ($args[0] === self::REL_LAZYMANY)
-                 ){
-                    $relationship = $args[0];
-                 }  else if(is_string($args[0])) {
-                    $foreignKeyN = $args[0];
-                 }  else if(is_array($args[0])){
-                    $whereCondition = $args[0];
-                 } else if($args[0] instanceof Closure) {
-                    $callback = $args[0];
-                 }
+                if (isset($args[0])) {
+                    if (($args[0] === self::REL_HASONE) || ($args[0] === self::REL_LAZYONE) ||
+                        ($args[0] === self::REL_HASMANY) || ($args[0] === self::REL_LAZYMANY)
+                    ){
+                        $relationship = $args[0];
+                    } else if (is_string($args[0])) {
+                        $foreignKeyN = $args[0];
+                    } else if (is_array($args[0])){
+                        $whereCondition = $args[0];
+                    } else if ($args[0] instanceof Closure) {
+                        $callback = $args[0];
+                    }                    
+                }
+
                  
                 array_shift($args);
 
@@ -1191,7 +1194,8 @@ class VoodOrm implements IteratorAggregate
                         });
                     }
 
-                    return self::$references[$token][$this->{$primaryKeyN}];
+                    return isset(self::$references[$token][$this->{$primaryKeyN}])
+                                ? self::$references[$token][$this->{$primaryKeyN}] : false;
 
                 break;
 
