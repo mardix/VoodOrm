@@ -1,8 +1,8 @@
 <?php
 
-namespace Voodoo\Core;
+namespace Voodoo;
 
-require_once dirname(__FILE__) . '/../../../../src/Voodoo/Core/VoodOrm.php';
+require_once dirname(__FILE__) . '/../../../src/Voodoo/VoodOrm.php';
 
 use PDO;
 
@@ -31,7 +31,7 @@ class VoodOrmTest extends \PHPUnit_Framework_TestCase {
      * This method is called before a test is executed.
      */
     protected function setUp() {
-        $PDO = new PDO("mysql:host=localhost;dbname=voodorm","root","");
+        $PDO = new PDO("mysql:host=localhost;dbname=voodorm_test","root","");
         $VoodOrm = new VoodOrm($PDO);
         $this->VoodOrm = $VoodOrm->table($this->table);
     }
@@ -42,7 +42,7 @@ class VoodOrmTest extends \PHPUnit_Framework_TestCase {
     
     public function testTable()
     {
-        $this->assertInstanceOf("Voodoo\Core\VoodOrm",$this->VoodOrm->table("new_table"));
+        $this->assertInstanceOf("Voodoo\VoodOrm",$this->VoodOrm->table("new_table"));
     }
     
     public function testSimpleSelect()
