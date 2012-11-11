@@ -5,7 +5,7 @@
 
 Name: VoodOrm
 
-version: 0.3.x
+version: 0.4.x
 
 License: MIT
 
