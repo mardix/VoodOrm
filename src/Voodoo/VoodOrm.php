@@ -32,7 +32,7 @@ use ArrayIterator,
 class VoodOrm implements IteratorAggregate
 {
     const NAME              = "VoodOrm";
-    const VERSION           = "0.4.0";
+    const VERSION           = "0.4.1";
 
     // RELATIONSHIP CONSTANT
     const REL_HASONE        =  1;       // OneToOne. Eager Load data
@@ -902,6 +902,8 @@ class VoodOrm implements IteratorAggregate
      */
     public function delete()
     {
+        $this->setSingleWhere();
+
         $query  = "DELETE FROM {$this->table_name}";
         $query .= $this->getWhereString();
 
