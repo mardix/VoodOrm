@@ -32,7 +32,7 @@ use ArrayIterator,
 class VoodOrm implements IteratorAggregate
 {
     const NAME              = "VoodOrm";
-    const VERSION           = "0.4.1";
+    const VERSION           = "0.5";
 
     // RELATIONSHIP CONSTANT
     const REL_HASONE        =  1;       // OneToOne. Eager Load data
@@ -144,23 +144,35 @@ class VoodOrm implements IteratorAggregate
      *
      * @param  string   $tableName - Table name
      * @param  string   $alias     - The table alias name
-     * @return Voodoo\VoodOrm 
+     * @return Voodoo\VoodOrm
      */
     public function table($tableName, $alias = "")
     {
         $instance = clone($this);
-        
+
         $instance->table_name = $this->table_structure["tablePrefix"].$tableName;
 
         $instance->table_token = $this->tokenize($this->table_name,":");
 
-        $instance->table_alias = $alias;
+        $instance->setTableAlias($alias);
 
         $instance->primary_key_name = $this->formatTableKeyName($this->table_structure["primaryKeyName"], $tableName);
 
         $instance->foreign_key_name = $this->formatTableKeyName($this->table_structure["foreignKeyName"], $tableName);
 
         return $instance;
+    }
+
+    /**
+     * Set the table alias
+     *
+     * @param string $alias
+     * @return Voodoo\VoodOrm
+     */
+    public function setTableAlias($alias)
+    {
+        $this->table_alias = $alias;
+        return $this;
     }
 
 /*******************************************************************************/
