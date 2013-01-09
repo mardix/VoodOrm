@@ -32,7 +32,7 @@ use ArrayIterator,
 class VoodOrm implements IteratorAggregate
 {
     const NAME              = "VoodOrm";
-    const VERSION           = "0.5.1";
+    const VERSION           = "0.6";
 
     // RELATIONSHIP CONSTANT
     const REL_HASONE        =  1;       // OneToOne. Eager Load data
@@ -45,63 +45,35 @@ class VoodOrm implements IteratorAggregate
     const WHERE_OPERATOR_OR  = " OR ";
     
     public $pdo = null;
-
     public $pdoStmt = null;
-
     public $table_name = "";
-
     public $table_token = "";
-
     public $primary_key_name = "id";
-
     public $foreign_key_name = "";
-
     public $allRows = array();
-
     protected $table_alias = "";
-
     protected $is_single = false;
-
     private $select_fields = array();
-
     private $join_sources = array();
-
     private $limit = null;
-
     private $offset = null;
-
     private $order_by = array();
-
     private $group_by = array();
-
     private $where_parameters = array();
-
     private $where_conditions = array();
-    
     private $where_operator = self::WHERE_OPERATOR_AND;
-    
     private $wrap_open = false;
-    
     private $last_wrap_position = 0;
-
     private $is_fluent_query = true;
-
     private $pdo_executed = false;
-
     private $_data = array();
-    
     private $debug_sql_query = false;
-    
     private $sql_query = "";
-    
     private $sql_parameters = array();
-
     private $_dirty_fields = array();
-
+    private $query_profiler = array();
     private static $references = array();
     
-    private $query_profiler = array();
-
     // Table structure
     public $table_structure = array(
         "primaryKeyName"    => "id",
@@ -178,50 +150,48 @@ class VoodOrm implements IteratorAggregate
 /*******************************************************************************/
     /**
      * To execute a raw query
-     *
-     * @param string $query
-     * @param Array  $parameters
-     * @param bool   $is_fluent_query -
-     *          FALSE to return a bool if the the pdoStmt was executed
-     *          TRUE, return self and you can use $this->find() or $this->findOne() to retrieve entries
-     * @return bool | Voodoo\VoodOrm 
+     * 
+     * @param string    $query
+     * @param Array     $parameters
+     * @param bool      $return_as_pdoStmt - true, it will return the PDOStatement
+     *                                       false, it will return $this, which can be used for chaining
+     *                                              or access the properties of the results
+     * @return VoodOrm | PDOStatement
      */
-    public function query($query, Array $parameters = array(), $is_fluent_query = true)
+    public function query($query, Array $parameters = array(), $return_as_pdoStmt = false)
     {
         $this->sql_parameters = $parameters;
         $this->sql_query = $query;
-        
+
         if ($this->debug_sql_query) {
-            return false;
+            return $this;
         } else {
             $_stime = microtime(true);
-
             $this->pdoStmt = $this->pdo->prepare($query);
-
             $this->pdo_executed = $this->pdoStmt->execute($parameters);
-
             $_time = microtime(true) - $_stime;
 
             // query profiler
             if (! isset($this->query_profiler["total_time"])){
                 $this->query_profiler["total_time"] = 0;
             }
-
             $this->query_profiler[] = array(
                 "query"         => $query,
                 "params"        => $parameters,
                 "affected_rows" => $this->rowCount(),
                 "time"          => $_time
             );
-
             $this->query_profiler["total_time"] = $this->query_profiler["total_time"] + $_time;
-
-            $this->is_fluent_query = $is_fluent_query;
-
-            return $this->is_fluent_query ? $this : $this->pdo_executed;            
+            
+            if ($return_as_pdoStmt) {
+                return $this->pdoStmt;
+            } else {
+                $this->is_fluent_query = true;
+                return $this;
+            }        
         }
     }
-
+    
     /**
      * Return the number of affected row by the last statement
      *
@@ -252,7 +222,7 @@ class VoodOrm implements IteratorAggregate
     {
         $map = array();
 
-        if($this->is_fluent_query){
+        if($this->is_fluent_query && $this->pdoStmt == null){
             $this->query($this->getSelectQuery(), $this->getWhereParameters());
         }
         
@@ -262,9 +232,8 @@ class VoodOrm implements IteratorAggregate
             return false;
         } else {
             if ($this->pdo_executed == true) {
-                $this->reset();
                 $this->allRows = $this->pdoStmt->fetchAll(PDO::FETCH_ASSOC);
-
+                $this->reset();
                 if (is_callable($callback)) {
                     return $callback($this->allRows);
                 } else {
@@ -839,12 +808,12 @@ class VoodOrm implements IteratorAggregate
         $sql = "INSERT INTO {$this->table_name} (" . implode(",", $datafield ) . ") ";
         $sql .= "VALUES " . implode(',', $question_marks);
 
-        $this->query($sql,$insert_values,false);
+        $this->query($sql,$insert_values);
 
         // Return the SQL Query
         if ($this->debug_sql_query) {
             $this->debugSqlQuery(false);
-            return false;
+            return $this;
         }
                 
         $rowCount = $this->rowCount();
@@ -853,7 +822,7 @@ class VoodOrm implements IteratorAggregate
             return $this->findOne($this->pdo->lastInsertId($this->primary_key_name));
         }
 
-        return $this->rowCount();
+        return $rowCount;
     }
 
 /*------------------------------------------------------------------------------
@@ -891,15 +860,15 @@ class VoodOrm implements IteratorAggregate
 
         $values = array_merge($values, $this->getWhereParameters());
 
-        $this->query($query, $values, false);
+        $this->query($query, $values);
         
         // Return the SQL Query
         if ($this->debug_sql_query) {
             $this->debugSqlQuery(false);
-            return false;
+            return $this;
         } else {
             $this->_dirty_fields = array();
-            return false;            
+            return $this->rowCount();            
         }
     }
 
@@ -919,12 +888,12 @@ class VoodOrm implements IteratorAggregate
         $query  = "DELETE FROM {$this->table_name}";
         $query .= $this->getWhereString();
 
-        $q = $this->query($query, $this->getWhereParameters(), false);
+        $this->query($query, $this->getWhereParameters());
         
         // Return the SQL Query
         if ($this->debug_sql_query) {
             $this->debugSqlQuery(false);
-            return false;
+            return $this;
         } else {
            return $this->rowCount(); 
         }
@@ -1035,9 +1004,9 @@ class VoodOrm implements IteratorAggregate
      */
     public function aggregate($fn)
     {
+        $this->reset();
         $this->select($fn, 'count');
         $result = $this->findOne();
-
         return ($result !== false && isset($result->count)) ? $result->count : 0;
     }
 
@@ -1319,6 +1288,7 @@ class VoodOrm implements IteratorAggregate
         $this->wrap_open = false;
         $this->last_wrap_position = 0;
         $this->debug_sql_query = false;
+        $this->pdoStmt = null;
         return $this;
     }
 
