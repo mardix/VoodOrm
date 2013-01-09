@@ -121,17 +121,12 @@ class VoodOrm implements IteratorAggregate
     public function table($tableName, $alias = "")
     {
         $instance = clone($this);
-
         $instance->table_name = $this->table_structure["tablePrefix"].$tableName;
-
         $instance->table_token = $this->tokenize($this->table_name,":");
-
         $instance->setTableAlias($alias);
-
         $instance->primary_key_name = $this->formatTableKeyName($this->table_structure["primaryKeyName"], $tableName);
-
         $instance->foreign_key_name = $this->formatTableKeyName($this->table_structure["foreignKeyName"], $tableName);
-
+        $instance->reset();
         return $instance;
     }
 
