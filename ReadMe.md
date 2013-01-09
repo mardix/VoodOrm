@@ -5,8 +5,6 @@
 
 Name: VoodOrm
 
-version: 0.4.x
-
 License: MIT
 
 Author: [Mardix](http://github.com/mardix)
