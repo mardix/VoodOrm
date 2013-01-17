@@ -32,7 +32,7 @@ use ArrayIterator,
 class VoodOrm implements IteratorAggregate
 {
     const NAME              = "VoodOrm";
-    const VERSION           = "1.0.6";
+    const VERSION           = "1.0.7";
 
     // RELATIONSHIP CONSTANT
     const REL_HASONE        =  1;       // OneToOne. Eager Load data
@@ -999,7 +999,6 @@ class VoodOrm implements IteratorAggregate
      */
     public function aggregate($fn)
     {
-        $this->reset();
         $this->select($fn, 'count');
         $result = $this->findOne();
         return ($result !== false && isset($result->count)) ? $result->count : 0;
