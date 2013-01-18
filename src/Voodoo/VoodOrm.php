@@ -32,7 +32,7 @@ use ArrayIterator,
 class VoodOrm implements IteratorAggregate
 {
     const NAME              = "VoodOrm";
-    const VERSION           = "1.0.7";
+    const VERSION           = "1.0.8";
 
     // RELATIONSHIP CONSTANT
     const REL_HASONE        =  1;       // OneToOne. Eager Load data
@@ -813,8 +813,10 @@ class VoodOrm implements IteratorAggregate
                 
         $rowCount = $this->rowCount();
 
+        // On single element return the object
         if ($rowCount == 1) {
-            return $this->findOne($this->pdo->lastInsertId($this->primary_key_name));
+            $data[$this->primary_key_name] = $this->pdo->lastInsertId($this->primary_key_name);
+            return $this->_toRow($data);
         }
 
         return $rowCount;
