@@ -32,7 +32,7 @@ use ArrayIterator,
 class VoodOrm implements IteratorAggregate
 {
     const NAME              = "VoodOrm";
-    const VERSION           = "1.0.8";
+    const VERSION           = "1.0.9";
 
     // RELATIONSHIP CONSTANT
     const REL_HASONE        =  1;       // OneToOne. Eager Load data
@@ -839,6 +839,9 @@ class VoodOrm implements IteratorAggregate
         if (! is_null($data)) {
             $this->set($data);
         }
+
+        // Make sure we remove the primary key
+        unset($this->_dirty_fields[$this->primary_key_name]);
         
         $values = array_values($this->_dirty_fields);
         $field_list = array();
@@ -909,12 +912,15 @@ class VoodOrm implements IteratorAggregate
      */
     public function set($key, $value = null)
     {
-        if (is_array($key)) {
-            $this->_data = array_merge($this->_data, $key);
-            $this->_dirty_fields = array_merge($this->_dirty_fields, $key);
-        } else {
-            $this->_data[$key] = $value;
-            $this->_dirty_fields[$key] = $value;
+        if(is_array($key)) {
+            foreach ($key as $keyKey => $keyValue) {
+                $this->set($keyKey, $keyValue);
+            }
+        }  else {
+            if( $key != $this->primary_key_name) {
+                $this->_data[$key] = $value;
+                $this->_dirty_fields[$key] = $value;                
+            }
         }
         return $this;
     }
@@ -926,10 +932,10 @@ class VoodOrm implements IteratorAggregate
      */
     public function save() 
     {
-        if (! $this->where_conditions || ! $this->is_single) {
-            return $this->insert($this->_data);
-        } else {
+        if ($this->is_single || count($this->where_conditions)) {
             return $this->update();
+        } else {
+            return $this->insert($this->_dirty_fields);
         }
     }    
 
