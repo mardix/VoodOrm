@@ -32,7 +32,7 @@ use ArrayIterator,
 class VoodOrm implements IteratorAggregate
 {
     const NAME              = "VoodOrm";
-    const VERSION           = "1.0.9";
+    const VERSION           = "1.0.10";
 
     // RELATIONSHIP CONSTANT
     const REL_HASONE        =  1;       // OneToOne. Eager Load data
@@ -672,15 +672,11 @@ class VoodOrm implements IteratorAggregate
      */
     public function getSelectQuery()
     {
-        $columns = (is_array($this->select_fields) && count($this->select_fields)) 
-                    ? $this->select_fields : array("*");
-        
-        $result_columns = implode(", ", $columns);
+        $columns = count($this->select_fields) ? $this->select_fields : array("*");
 
-        $query = "SELECT {$result_columns} FROM {$this->table_name}";
-
-            $query .= ($this->table_alias) ? " AS {$this->table_alias}" : "";
-            
+        $query  = "SELECT ";
+        $query .= implode(", ", $this->prepareColumns($columns));
+        $query .= " FROM {$this->table_name}".($this->table_alias ? " AS {$this->table_alias}" : "");
         if(count($this->join_sources)){
             $query .= (" ").implode(" ",$this->join_sources);
         }
@@ -700,6 +696,29 @@ class VoodOrm implements IteratorAggregate
         return $query;
     }
 
+    /**
+     * Prepare columns to include the table alias name
+     * @param array $columns
+     * @return array
+     */
+    private function prepareColumns(Array $columns){
+        if (! $this->table_alias) {
+            return $columns;
+        }
+        
+        $newColumns = array();
+        foreach ($columns as $column) {
+            if (strpos($column, ",")) {
+                $newColumns = array_merge($this->prepareColumns(explode(",", $column)), $newColumns);
+            } else if (strpos($column, ".") == false) {
+                $column = trim($column);
+                $newColumns[] = $this->table_alias.".{$column}";
+            } else {
+                $newColumns[] = trim($column);
+            }
+        }
+        return $newColumns;
+    }
     
     /**
      * Build the WHERE clause(s)
