@@ -20,6 +20,13 @@
  * 
  * Learn more: https://github.com/mardix/VoodOrm
  * 
+ * PHP 5.3 - 1.x
+ * PHP 5.4 - 2.x (March 2013)
+ * 
+ * Simple
+ * $db = new Voodoo\VoodOrm(PDO);
+ * $table = $db->table("my table");
+ * $allEntries = $table->where()->orderBy()->limit()->find();
  */
 
 namespace Voodoo;
@@ -32,8 +39,7 @@ use ArrayIterator,
 class VoodOrm implements IteratorAggregate
 {
     const NAME              = "VoodOrm";
-    const VERSION           = "1.0.10";
-
+    const VERSION           = "2.0";
     // RELATIONSHIP CONSTANT
     const REL_HASONE        =  1;       // OneToOne. Eager Load data
     const REL_LAZYONE       = -1;     // OneToOne. Lazy load data
@@ -44,42 +50,43 @@ class VoodOrm implements IteratorAggregate
     const WHERE_OPERATOR_AND = " AND ";
     const WHERE_OPERATOR_OR  = " OR ";
     
-    public $pdo = null;
-    public $pdoStmt = null;
-    public $table_name = "";
-    public $table_token = "";
-    public $primary_key_name = "id";
-    public $foreign_key_name = "";
-    public $allRows = array();
-    protected $table_alias = "";
-    protected $is_single = false;
-    private $select_fields = array();
-    private $join_sources = array();
+    const ORDERBY_ASC       = "ASC";
+    const ORDERBY_DESC      = "DESC";
+
+    protected $table_name = "";
+    protected $table_token = "";
+    
+    private $pdo = null;
+    private $pdo_stmt = null;
+    private $pdo_executed = false;
+    private $table_alias = "";
+    private $is_single = false;
+    private $select_fields = [];
+    private $join_sources = [];
     private $limit = null;
     private $offset = null;
-    private $order_by = array();
-    private $group_by = array();
-    private $where_parameters = array();
-    private $where_conditions = array();
+    private $order_by = [];
+    private $group_by = [];
+    private $where_parameters = [];
+    private $where_conditions = [];
     private $where_operator = self::WHERE_OPERATOR_AND;
     private $wrap_open = false;
     private $last_wrap_position = 0;
     private $is_fluent_query = true;
-    private $pdo_executed = false;
-    private $_data = array();
+    private $_data = [];
+    private $_dirty_data = [];    
     private $debug_sql_query = false;
     private $sql_query = "";
-    private $sql_parameters = array();
-    private $_dirty_fields = array();
-    private $query_profiler = array();
-    private static $references = array();
-    
+    private $sql_parameters = [];
+    private $query_profiler = [];
+    private $reference_keys = [];    
+    public static $references = [];
+
     // Table structure
-    public $table_structure = array(
+    private $table_structure = [
         "primaryKeyName"    => "id",
-        "foreignKeyName"    => "%s_id",
-        "tablePrefix"       => ""
-    );
+        "foreignKeyName"    => "%s_id"
+    ];
 
 /*******************************************************************************/
 
@@ -90,25 +97,11 @@ class VoodOrm implements IteratorAggregate
      * @param string $primaryKeyName - Structure: table primary. If its an array, it must be the structure
      * @param string $foreignKeyName - Structure: table foreignKeyName.
      *                  It can be like %s_id where %s is the table name
-     * @param string $tablePrefix
-     *
      */
-    public function __construct(PDO $pdo, $primaryKeyName = "id", 
-                                $foreignKeyName = "%s_id", $tablePrefix = "") {
+    public function __construct(PDO $pdo, $primaryKeyName = "id", $foreignKeyName = "%s_id") 
+    {
         $this->pdo = $pdo;
-
-        // Set the table structure
-        if (is_array($primaryKeyName)) {
-            $structure = $primaryKeyName;
-        } else {
-            $structure = array(
-                "primaryKeyName"    => $primaryKeyName,
-                "foreignKeyName"    => $foreignKeyName,
-                "tablePrefix"       => $tablePrefix
-            );
-        }
-
-        $this->table_structure = array_merge($this->table_structure, $structure);
+        $this->setStructure($primaryKeyName, $foreignKeyName);
     }
 
     /**
@@ -121,13 +114,19 @@ class VoodOrm implements IteratorAggregate
     public function table($tableName, $alias = "")
     {
         $instance = clone($this);
-        $instance->table_name = $this->table_structure["tablePrefix"].$tableName;
-        $instance->table_token = $this->tokenize($this->table_name,":");
+        $instance->table_name = $tableName;
+        $instance->table_token = $tableName;
         $instance->setTableAlias($alias);
-        $instance->primary_key_name = $this->formatTableKeyName($this->table_structure["primaryKeyName"], $tableName);
-        $instance->foreign_key_name = $this->formatTableKeyName($this->table_structure["foreignKeyName"], $tableName);
         $instance->reset();
         return $instance;
+    }
+    
+    /**
+     * Return the name of the table
+     * @return type
+     */
+    public function getTablename(){
+        return $this->table_name;
     }
 
     /**
@@ -142,18 +141,71 @@ class VoodOrm implements IteratorAggregate
         return $this;
     }
 
+    
+    /**
+     * 
+     * @param string $primaryKeyName - the primary key, ie: id
+     * @param string $foreignKeyName - the foreign key as a pattern: %s_id, 
+     *                                  where %s will be substituted with the table name
+     * @return \Voodoo\VoodOrm
+     */
+    public function setStructure($primaryKeyName = "id", $foreignKeyName = "%s_id")
+    {
+        $this->table_structure = [
+            "primaryKeyname" => $primaryKeyName,
+            "foreignKeyname" => $foreignKeyName
+        ];
+        return $this;
+    }
+    
+    /**
+     * Return the table stucture
+     * @return Array
+     */
+    public function getStructure()
+    {
+        return $this->table_structure;
+    }
+    
+    /**
+     * Get the primary key name
+     * @return string
+     */
+    public function getPrimaryKeyname()
+    {
+        return $this->formatKeyname($this->table_structure["primaryKeyname"], $this->table_name);
+    }
+    
+    /**
+     * Get foreign key name
+     * @return string
+     */
+    public function getForeignKeyname()
+    {
+        return $this->formatKeyname($this->table_structure["foreignKeyname"], $this->table_name);
+    }
+    
+    /**
+     * Return if the entry is of a single row
+     * 
+     * @return bool
+     */
+    public function isSingleRow()
+    {
+        return $this->is_single;
+    }
 /*******************************************************************************/
     /**
      * To execute a raw query
      * 
      * @param string    $query
      * @param Array     $parameters
-     * @param bool      $return_as_pdoStmt - true, it will return the PDOStatement
+     * @param bool      $return_as_pdo_stmt - true, it will return the PDOStatement
      *                                       false, it will return $this, which can be used for chaining
      *                                              or access the properties of the results
      * @return VoodOrm | PDOStatement
      */
-    public function query($query, Array $parameters = array(), $return_as_pdoStmt = false)
+    public function query($query, Array $parameters = [], $return_as_pdo_stmt = false)
     {
         $this->sql_parameters = $parameters;
         $this->sql_query = $query;
@@ -162,24 +214,24 @@ class VoodOrm implements IteratorAggregate
             return $this;
         } else {
             $_stime = microtime(true);
-            $this->pdoStmt = $this->pdo->prepare($query);
-            $this->pdo_executed = $this->pdoStmt->execute($parameters);
+            $this->pdo_stmt = $this->pdo->prepare($query);
+            $this->pdo_executed = $this->pdo_stmt->execute($parameters);
             $_time = microtime(true) - $_stime;
 
             // query profiler
             if (! isset($this->query_profiler["total_time"])){
                 $this->query_profiler["total_time"] = 0;
             }
-            $this->query_profiler[] = array(
-                "query"         => $query,
-                "params"        => $parameters,
-                "affected_rows" => $this->rowCount(),
-                "time"          => $_time
-            );
+            $this->query_profiler[] = [
+                                "query"         => $query,
+                                "params"        => $parameters,
+                                "affected_rows" => $this->rowCount(),
+                                "time"          => $_time
+                            ];
             $this->query_profiler["total_time"] = $this->query_profiler["total_time"] + $_time;
             
-            if ($return_as_pdoStmt) {
-                return $this->pdoStmt;
+            if ($return_as_pdo_stmt) {
+                return $this->pdo_stmt;
             } else {
                 $this->is_fluent_query = true;
                 return $this;
@@ -194,7 +246,7 @@ class VoodOrm implements IteratorAggregate
      */
     public function rowCount()
     {
-        return ($this->pdo_executed == true) ? $this->pdoStmt->rowCount() : 0;
+        return ($this->pdo_executed == true) ? $this->pdo_stmt->rowCount() : 0;
     }
 
 
@@ -215,9 +267,7 @@ class VoodOrm implements IteratorAggregate
      */
     public function find(Closure $callback = null)
     {
-        $map = array();
-
-        if($this->is_fluent_query && $this->pdoStmt == null){
+        if($this->is_fluent_query && $this->pdo_stmt == null){
             $this->query($this->getSelectQuery(), $this->getWhereParameters());
         }
         
@@ -227,18 +277,43 @@ class VoodOrm implements IteratorAggregate
             return false;
         } else {
             if ($this->pdo_executed == true) {
-                $this->allRows = $this->pdoStmt->fetchAll(PDO::FETCH_ASSOC);
+                $allRows = $this->pdo_stmt->fetchAll(PDO::FETCH_ASSOC);
                 $this->reset();
                 if (is_callable($callback)) {
-                    return $callback($this->allRows);
+                    return $callback($allRows);
                 } else {
-                    $that = $this;
-                    $map = array_map(function($r) use ($that) {
-                                return $that->_toRow($r);
-                            }, $this->allRows);                    
+                    $iterator = new ArrayIterator;
+                    if(count($allRows)) {
+                        // Holding all foreign keys matching the structure
+                        $matchForeignKey = function($key) {
+                            return preg_match("/".str_replace("%s","[a-z]", $this->table_structure["foreignKeyname"])."/i", $key);  
+                        };
+                        foreach ($allRows as $index => &$row) {
+                            if ($index == 0) {
+                                $this->reference_keys = [$this->table_structure["primaryKeyname"] => []];
+                                foreach(array_keys($row) as $_rowK) {
+                                    if ($matchForeignKey($_rowK)) {
+                                        $this->reference_keys[$_rowK] = [];
+                                    }
+                                }
+                            }
+                            foreach($row as $rowK => &$rowV) {
+                                if(array_key_exists($rowK, $this->reference_keys)) {
+                                    $this->reference_keys[$rowK][] = $rowV;
+                                    $this->reference_keys[$rowK] = array_unique($this->reference_keys[$rowK]);
+                                }
+                            }
+                        }
+                        unset($row);
+                        foreach ($allRows as $row) {
+                            $iterator->append($this->_toRow($row));
+                        }
+                    }
+                    return $iterator;           
                 }
-            }
-            return new ArrayIterator($map);            
+            } else {
+                return false;
+            }           
         }      
     }
     
@@ -327,7 +402,7 @@ class VoodOrm implements IteratorAggregate
      * @param mixed ...
      * @return Voodoo\VoodOrm 
      */
-    public function where($condition, $parameters = array())
+    public function where($condition, $parameters = [])
     {
         $this->is_fluent_query = true;
         
@@ -358,15 +433,14 @@ class VoodOrm implements IteratorAggregate
             $condition = "({$condition} IN ({$placeholders}))";
         }
 
-        $this->where_conditions[] = array(
-            "STATEMENT"   => $condition,
-            "PARAMS"      => $parameters,
-            "OPERATOR"    => $this->where_operator
-        );
+        $this->where_conditions[] = [
+                        "STATEMENT"   => $condition,
+                        "PARAMS"      => $parameters,
+                        "OPERATOR"    => $this->where_operator
+                    ];
 
         // Reset the where operator to AND. To use OR, you must call _or()
-        $this->_and();
-        
+        $this->_and();        
         return $this;
     }
 
@@ -413,13 +487,10 @@ class VoodOrm implements IteratorAggregate
     public function wrap()
     {
         $this->wrap_open = true;
-        
         $spliced = array_splice($this->where_conditions, $this->last_wrap_position, count($this->where_conditions), "(");
         $this->where_conditions = array_merge($this->where_conditions, $spliced);
-
         array_push($this->where_conditions,")");
         $this->last_wrap_position = count($this->where_conditions);
-
         return $this;
     }
     
@@ -573,7 +644,7 @@ class VoodOrm implements IteratorAggregate
      * @param  string   $ordering   (DESC | ASC)
      * @return Voodoo\VoodOrm 
      */
-    public function orderBy($columnName, $ordering = "")
+    public function orderBy($columnName, $ordering = self::ORDERBY_ASC)
     {
         $this->is_fluent_query = true;
         $this->order_by[] = "{$columnName} {$ordering}";
@@ -605,11 +676,9 @@ class VoodOrm implements IteratorAggregate
     {
         $this->is_fluent_query = true;
         $this->limit = $limit;
-        
         if($offset){
             $this->offset($offset);
         }
-
         return $this;
     }
 
@@ -639,9 +708,8 @@ class VoodOrm implements IteratorAggregate
     public function join($table, $constraint, $table_alias = "", $join_operator = "")
     {
         $this->is_fluent_query = true;
-
         if($table instanceof VoodOrm){
-            $table = $table->table_name;
+            $table = $table->getTablename();
         }
         $join  = $join_operator ? "{$join_operator} " : "";
         $join .= "JOIN {$table} ";
@@ -672,8 +740,7 @@ class VoodOrm implements IteratorAggregate
      */
     public function getSelectQuery()
     {
-        $columns = count($this->select_fields) ? $this->select_fields : array("*");
-
+        $columns = count($this->select_fields) ? $this->select_fields : ["*"];
         $query  = "SELECT ";
         $query .= implode(", ", $this->prepareColumns($columns));
         $query .= " FROM {$this->table_name}".($this->table_alias ? " AS {$this->table_alias}" : "");
@@ -706,7 +773,7 @@ class VoodOrm implements IteratorAggregate
             return $columns;
         }
         
-        $newColumns = array();
+        $newColumns = [];
         foreach ($columns as $column) {
             if (strpos($column, ",")) {
                 $newColumns = array_merge($this->prepareColumns(explode(",", $column)), $newColumns);
@@ -731,10 +798,10 @@ class VoodOrm implements IteratorAggregate
         if (!count($this->where_conditions)) {
             return " WHERE 1";
         } 
-
+        
         $where_condition = "";
         $last_condition = "";
-
+        
         foreach ($this->where_conditions as $condition) {
             if (is_array($condition)) {
                 if ($where_condition && $last_condition != "(" && !preg_match("/\)\s+(OR|AND)\s+$/i", $where_condition)) {
@@ -747,7 +814,6 @@ class VoodOrm implements IteratorAggregate
             }
             $last_condition = $condition;
         }
-
         return " WHERE {$where_condition}" ;
     }
 
@@ -782,8 +848,8 @@ class VoodOrm implements IteratorAggregate
       */
     protected function resetWhere()
     {
-        $this->where_conditions = array();
-        $this->where_parameters = array();
+        $this->where_conditions = [];
+        $this->where_parameters = [];
         return $this;
     }  
     
@@ -801,25 +867,31 @@ class VoodOrm implements IteratorAggregate
      */
     public function insert(Array $data)
     {
-        $insert_values = array();
-        $question_marks = array();
-
-        // check if the data is multi dimention for bulk insert
-        $multi = (count($data) != count($data,COUNT_RECURSIVE));
-
-        $datafield = array_keys( $multi ? $data[0] : $data);
-
-        if ($multi) {
+        $insert_values = [];
+        $question_marks = [];
+        
+        /**
+         * Bulk insert
+         * $data = [
+         *  ['col1' => 'val1', 'col2' => $val2, ...],
+         *  ['col1' => 'val1', 'col2' => $val2, ...],
+         *  ['col1' => 'val1', 'col2' => $val2, ...],
+         * ];
+         */
+        if (count($data) != count($data,COUNT_RECURSIVE)) {
+            $datafield = $data[0];
+            $placeholderCount = count($data[0]);
             foreach ($data as $d) {
-                $question_marks[] = '('  . $this->makePlaceholders(count($d)) . ')';
+                $question_marks[] = '('  . $this->makePlaceholders($placeholderCount) . ')';
                 $insert_values = array_merge($insert_values, array_values($d));
             }
-        } else {
+        } else { // Single insert: $data = ['col1' => 'val1', 'col2' => $val2, ...];
+            $datafield = $data;
             $question_marks[] = '('  . $this->makePlaceholders(count($data)) . ')';
             $insert_values = array_values($data);
         }
 
-        $sql = "INSERT INTO {$this->table_name} (" . implode(",", $datafield ) . ") ";
+        $sql = "INSERT INTO {$this->table_name} (" . implode(",", array_keys($datafield) ) . ") ";
         $sql .= "VALUES " . implode(',', $question_marks);
 
         $this->query($sql,$insert_values);
@@ -860,16 +932,16 @@ class VoodOrm implements IteratorAggregate
         }
 
         // Make sure we remove the primary key
-        unset($this->_dirty_fields[$this->primary_key_name]);
+        unset($this->_dirty_data[$this->primary_key_name]);
         
-        $values = array_values($this->_dirty_fields);
-        $field_list = array();
+        $values = array_values($this->_dirty_data);
+        $field_list = [];
 
         if (count($values) == 0){
             return false;
         }
 
-        foreach (array_keys($this->_dirty_fields) as $key) {
+        foreach (array_keys($this->_dirty_data) as $key) {
             $field_list[] = "{$key} = ?";
         }
 
@@ -886,7 +958,7 @@ class VoodOrm implements IteratorAggregate
             $this->debugSqlQuery(false);
             return $this;
         } else {
-            $this->_dirty_fields = array();
+            $this->_dirty_data = [];
             return $this->rowCount();            
         }
     }
@@ -903,10 +975,9 @@ class VoodOrm implements IteratorAggregate
     public function delete()
     {
         $this->setSingleWhere();
-
+        
         $query  = "DELETE FROM {$this->table_name}";
         $query .= $this->getWhereString();
-
         $this->query($query, $this->getWhereParameters());
         
         // Return the SQL Query
@@ -938,7 +1009,7 @@ class VoodOrm implements IteratorAggregate
         }  else {
             if( $key != $this->primary_key_name) {
                 $this->_data[$key] = $value;
-                $this->_dirty_fields[$key] = $value;                
+                $this->_dirty_data[$key] = $value;                
             }
         }
         return $this;
@@ -954,7 +1025,7 @@ class VoodOrm implements IteratorAggregate
         if ($this->is_single || count($this->where_conditions)) {
             return $this->update();
         } else {
-            return $this->insert($this->_dirty_fields);
+            return $this->insert($this->_dirty_data);
         }
     }    
 
@@ -1084,29 +1155,48 @@ class VoodOrm implements IteratorAggregate
 /*******************************************************************************/
 
     /**
-     * To dynamically call a table
+     * To dynamically create a relationship to a table via current data
      *
-     * $VoodOrm = new VoodOrm($myPDO);
-     * on table 'users'
-     * $Users = $VoodOrm->users();
+     * ie:
+     * $VoodOrm = new Voodoo\VoodOrm($myPDO);
+     * $users = $VoodOrm->table("users"); // Connect to the users table
+     * foreach ($users as $user) {
+     *      echo '{$user->name}';
+     *      $images = $user->image(); // connect to image table
+     * 
+     *      // Will get all images for that account
+     *      foreach($images as $image) {
+     *          echo '$image->src <br>';
+     *      }
+     * }
      *
      * Or to call a table relationship
      * on table 'photos' where users can have many photos
      * $allMyPhotos = $Users->findOne(1234)->photos();
      *
      * On relationship, it is faster to do eager load (VoodOrm::REL_HASONE | VoodOrm::REL_HASMANY)
+     * 
+     * 
+     * Relationship
+     * VoodOrm::REL_HASMANY & VoodOrm::REL_HASONE
      * All the data are loaded first than queried after. Eager load does one round to the table.
+     * After querying the data, it separately save the raw data and the callback in their own token
+     * Upon accessing the data, it will then pass the data to the callback
+     * 
+     * VoodOrm::REL_LAZYMANY & VoodOrm::REL_LAZYONE 
      * Lazy load will do multiple round to the table.
-     *
+     * 
      * @param  string $tableName
-     * @param  string $arg
+     * @param  mixed $arg
      * @return type
      */
-    public function __call($tableName,$args)
+    public function __call($tablename,$args)
     {
         /**
-         * On single object we'll create a relationship to the table called
-         * i.e:
+         * $args
+         * It holds as many params
+         * 
+         * 
          *  tablename(INT REL_TYPE, STRING foreign_key_name, ARRAY $whereArgs, Closure $callback)
          *
          * or
@@ -1122,7 +1212,7 @@ class VoodOrm implements IteratorAggregate
 
             $relationship = self::REL_HASMANY;
             $foreignKeyN = "";
-            $whereCondition = null;
+            $whereCondition = [];
             $callback = null;
 
             /**
@@ -1144,14 +1234,9 @@ class VoodOrm implements IteratorAggregate
                         $callback = $args[0];
                     }                    
                 }
-
-                 
                 array_shift($args);
-
             } while (count($args));
 
-            $foreignKeyN = $this->formatTableKeyName($foreignKeyN ?: $this->table_structure["foreignKeyName"],
-                                                        $tableName);
 
             switch ($relationship) {
                 /**
@@ -1162,124 +1247,132 @@ class VoodOrm implements IteratorAggregate
                  */
                 default:
                 case self::REL_HASMANY:
+                    $primaryKeyN = $this->getPrimaryKeyname();
+                    $foreignKeyN = $this->getForeignKeyname();
+                    
+                    $token = $this->tokenize($tablename,"$relationship:$foreignKeyN");
 
-                    $primaryKeyN = $this->primary_key_name;
-                    $foreignKeyN = $this->foreign_key_name;
-
-                    $token = $this->tokenize($tableName,$foreignKeyN.":".$relationship);
-
-                    // Voodoo
                     if (!isset(self::$references[$token])) {
 
-                        $newInstance = $this->table($tableName);
-
-                        $primaryKeys = array_unique(array_map(function($r) use ($primaryKeyN) {
-                            return $r[$primaryKeyN];
-                        },$this->allRows));
-
-                        $newInstance->where($this->foreign_key_name,$primaryKeys);
-                        if(is_array($whereCondition)){
+                        $newInstance = $this->table($tablename);
+                        if (isset($this->reference_keys[$primaryKeyN])) {
+                           $newInstance->where($foreignKeyN, $this->reference_keys[$primaryKeyN]); 
+                        }
+                        if (count($whereCondition)){
                             $newInstance->where($whereCondition);
                         }
+                        self::$references[$token]["data"] = 
+                                $newInstance->find(function($rows) use ($foreignKeyN) {
+                                                    $data = [];
+                                                    foreach($rows as &$row) {
+                                                       $data[$row[$foreignKeyN]][] = $row; 
+                                                    }
+                                                    return $data;
+                                                });
+                        
+                        self::$references[$token]["_callback"] = 
+                                                    is_callable($callback) 
+                                                    ? $callback 
+                                                    : function($rows) use ($newInstance){
+                                                            return new ArrayIterator(array_map(function($row) use ($newInstance) {
+                                                                return $newInstance->_toRow($row);
+                                                            }, $rows));
 
-                        self::$references[$token] = $newInstance->find(function($rows) use ($newInstance,$foreignKeyN,$callback) {
-                            $results = array();
-                            foreach ($rows as $row) {
-                                if(!isset($results[$row[$foreignKeyN]])){
-                                    $results[$row[$foreignKeyN]] = new ArrayIterator;
-                                }
+                                                        };                        
+                    }
+                    if (isset(self::$references[$token]["data"][$this->{$primaryKeyN}])) {
+                        $_callback = self::$references[$token]["_callback"];
+                        return $_callback(self::$references[$token]["data"][$this->{$primaryKeyN}]);
+                    } else {
+                        return null;
+                    }    
+                                
+                break;
+                
+                /**
+                 * OneToOne: Eager Load
+                 * All data will be loaded. Only does one round to the db table
+                 * Efficient and faster
+                 * 
+                 * This will also save the raw data and the callback separately
+                 * Upon accessing it, it will pass the data to callback
+                 */
+                case self::REL_HASONE:
+                    if(! $foreignKeyN) {
+                        $foreignKeyN = $this->formatKeyname($this->getStructure()["foreignKeyname"], $tablename);
+                    }
+                    
+                    if (isset($this->{$foreignKeyN})) {
+                        $token = $this->tokenize($tablename,"$relationship:$foreignKeyN");
+                        
 
-                                $results[$row[$foreignKeyN]]->append(is_callable($callback)
-                                                                     ? $callback($row) : $newInstance->_toRow($row));
+                        if (!isset(self::$references[$token])) {
+                            $newInstance = $this->table($tablename);
+                            $primaryKeyN = $newInstance->getPrimaryKeyname();
+                            if (isset($this->reference_keys[$foreignKeyN])) {
+                               $newInstance->where($primaryKeyN, $this->reference_keys[$foreignKeyN]); 
                             }
 
-                            return $results;
-                        });
+                            self::$references[$token]["data"] = 
+                                                    $newInstance->find(function($rows) use ($primaryKeyN) {
+                                                                            $results = [];
+                                                                            foreach ($rows as &$row) {
+                                                                                 $results[$row[$primaryKeyN]] =  $row; ;                                     
+                                                                            }
+                                                                            return $results;
+                                                                         });
+                            self::$references[$token]["_callback"] = 
+                                                            is_callable($callback) 
+                                                            ? $callback 
+                                                            : function($row) use ($newInstance){
+                                                                    return $newInstance->_toRow($row);
+                                                                };
+                        }
+
+                        if (isset(self::$references[$token]["data"][$this->{$foreignKeyN}])) {
+                        $_callback = self::$references[$token]["_callback"];                     
+                        return $_callback(self::$references[$token]["data"][$this->{$foreignKeyN}]);
+                        } else {
+                            return null;
+                        }
+                    } else {
+                        return null;
                     }
-
-                    return isset(self::$references[$token][$this->{$primaryKeyN}])
-                                ? self::$references[$token][$this->{$primaryKeyN}] : false;
-
-                break;
-
+                break;                
+                
+                
+                
+                
                 /**
                  * OneToMany: Lazy Load
                  * Data loaded upon request. Will take multiple rounds the table
                  */
                 case self::REL_LAZYMANY:
-                    $newInstance = $this->table($tableName)
-                                        ->where($this->foreign_key_name,$this->getPK());
+                    $newInstance = $this->table($tablename)
+                                        ->where($this->getForeignKeyname(), $this->getPK());
                     if(is_array($whereCondition)){
                         $newInstance->where($whereCondition);
                     }
-
                     return is_callable($callback) ? $callback($newInstance) : $newInstance;
                 break;
 
-                /**
-                 * OneToOne: Eager Load
-                 * All data will be loaded. Only does one round to the db table
-                 * Efficient and faster
-                 */
-                case self::REL_HASONE:
 
-                    if (isset($this->{$foreignKeyN})) {
-
-                        $token = $this->tokenize($tableName,$foreignKeyN.":".$relationship);
-
-                        // Voodoo
-                        if (!isset(self::$references[$token])) {
-
-                            $newInstance = $this->table($tableName);
-
-                            $newInstance->foreign_key_name = $foreignKeyN;
-
-                            $foreignKeys = array_unique(array_map(function($r) use ($foreignKeyN) {
-                                return $r[$foreignKeyN];
-                            },$this->allRows));
-
-                            $newInstance->where($newInstance->primary_key_name,$foreignKeys);
-                            if(is_array($whereCondition)){
-                                $newInstance->where($whereCondition);
-                            }
-
-                            self::$references[$token] = $newInstance->find(function($rows) use ($newInstance,$callback) {
-                               $results = array();
-                               foreach ($rows as $row) {
-                                    $results[$row[$newInstance->primary_key_name]] =  is_callable($callback)
-                                                                                ? $callback($row)
-                                                                                : $newInstance->_toRow($row);
-                               }
-
-                               return $results;
-                            });
-                        }
-
-                        return self::$references[$token][$this->{$foreignKeyN}];
-                    } else {
-                        return null;
-                    }
-
-                break;
 
                 /**
                  * OneToOne: Lazy Load
                  * Data loaded upon request. Will take multiple rounds the table
                  */
                 case self::REL_LAZYONE:
-                    $newInstance = $this->table($tableName)
-                                        ->wherePK($this->{$foreignKeyN});
+                    $newInstance = $this->table($tablename)->wherePK($this->{$foreignKeyN});
                     if(is_array($whereCondition)){
                         $newInstance->where($whereCondition);
                     }
-
                     $one = $newInstance->findOne();
-
-                    return is_callback($callback) ? $callback($one) : $one;
+                    return is_callback($callback) ? $callback($one->toArray()) : $one;
                 break;
             }
         } else {
-            return $this->table($tableName);
+            return null;
         }
 
     }
@@ -1294,35 +1387,44 @@ class VoodOrm implements IteratorAggregate
      */
     public function reset()
     {
-        $this->where_parameters = array();
-        $this->select_fields = array('*');
-        $this->join_sources = array();
-        $this->where_conditions = array();
+        $this->where_parameters = [];
+        $this->select_fields = ["*"];
+        $this->join_sources = [];
+        $this->where_conditions = [];
         $this->limit = null;
         $this->offset = null;
-        $this->order_by = array();
-        $this->group_by = array();
-        $this->_data = array();
-        $this->_dirty_fields = array();
+        $this->order_by = [];
+        $this->group_by = [];
+        $this->_data = [];
+        $this->_dirty_data = [];
         $this->is_fluent_query = true;
         $this->where_operator = self::WHERE_OPERATOR_AND;
         $this->wrap_open = false;
         $this->last_wrap_position = 0;
         $this->debug_sql_query = false;
-        $this->pdoStmt = null;
+        $this->pdo_stmt = null;
         return $this;
+   
+
+
     }
+
 
     /**
-     * Return the date in datetime format
-     *
+     * Return a YYYY-MM-DD HH:II:SS date format
+     * 
+     * @param string $strtotime - An english textual datetime description
+     *          now, yesterday, 3 days ago, +1 week
+     *          http://php.net/manual/en/function.strtotime.php
      * @return string YYYY-MM-DD HH:II:SS
-     */
-    public static function DateTime()
+     */    
+    public static function NOW($strtotime = "now")
     {
-        return date("Y-m-d H:i:s");
+        if (!$strtotime) {
+            $strtotime = "now";
+        }
+        return date("Y-m-d H:i:s", strtotime($strtotime));
     }
-
 
 
 /*******************************************************************************/
@@ -1390,7 +1492,7 @@ class VoodOrm implements IteratorAggregate
      * @param  string $tableName
      * @return string
      */
-    protected function formatTableKeyName($pattern, $tableName)
+    protected function formatKeyname($pattern, $tableName)
     {
        return sprintf($pattern,$tableName);
     }
@@ -1404,7 +1506,7 @@ class VoodOrm implements IteratorAggregate
      */
     private function tokenize($key, $suffix = "")
     {
-        return  $this->table_token.$key.$suffix;
+        return  $this->table_token.":$key:$suffix";
     }
 
     public function __clone()
@@ -1415,4 +1517,5 @@ class VoodOrm implements IteratorAggregate
     {
         return $this->is_single ? $this->getPK() : $this->table_name;
     }    
+    
 }
