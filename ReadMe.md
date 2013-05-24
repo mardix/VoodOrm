@@ -33,7 +33,7 @@ VoodOrm works easily with table relationship. And offers api that gets SQL out o
 
 ## Requirements
 
-- PHP >= 5.3
+- PHP >= 5.4
 - PDO
 
 ## Error Reporting
@@ -41,7 +41,7 @@ VoodOrm does not escalate errors. Non-existing table produces SQL error that is 
 
 ## What it doesn't do. 
 
-We believe it's best if certain stuff is kept to the developer to do, like caching or data validation. Also data validation can be done at the database level, like 
+We believe it's best if certain stuff is kept to the developer to do, like caching or data validation. Also data validation can be done at the database level.
 
 - No models or entities generation
 - No data validation
@@ -58,6 +58,7 @@ We believe it's best if certain stuff is kept to the developer to do, like cachi
 To get started with VoodOrm, you have to setup the PDO connection. We'll be using the variable $DB as the database connection, `$users` as the table, `$friends` as another table throughout this whole tutorial
 
 	$pdo = new PDO("mysql:host=localhost;dbname=$dbname", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 	$DB = new VoodOrm($pdo);
 
 ---
@@ -95,7 +96,7 @@ For a single entry:
 		 			"city" => "Charlotte",
 	     			"state" => "NC",
 					"device" => "mobile",
-		 			"timestamp" => $voodorm->Datetime()
+		 			"timestamp" => $DB->NOW()
 				));
 
 Returns the VoodOrm active record instance of this entry where you can use
@@ -109,23 +110,24 @@ For a mass insert:
 							 "city" => "Charlotte",
 						     "state" => "NC",
 						     "device" => "mobile",
-							 "timestamp" => $voodorm->Datetime()
+							 "timestamp" => $DB->NOW()
 						),
 						array(
 							 "name" => "Cesar",
 							 "city" => "Atlanta",
 						     "state" => "GA",
 							 "device" => "mobile",
-							 "timestamp" => $voodorm->Datetime()
+							 "timestamp" => $DB->NOW()
 						),
 						array(
 							 "name" => "Gaga",
 							 "city" => "Port-au-Prince",
 						     "state" => "HT",
 							 "device" => "computer",
-							 "timestamp" => $voodorm->Datetime()
+							 "timestamp" => $DB->NOW()
 						),
 					));
+
 
 returns the total entries that were inserted
 
@@ -146,7 +148,7 @@ it's the same as
 	$user->city = "Raleigh";
 	$user->update();
 
-You can use `save()` instead of `update()`
+You can also use `save()` instead of `update()`
 
 	$user->save();
 
@@ -196,11 +198,12 @@ To delete entries we'll use the `VoodOrm::delete()` method
 
 For single entries, by invoking the `delete()` method it will delete the current entry
 
-	$singleEntry->delete();
+	$user = $users->reset()->findOne(1234);
+	$user->delete();
 
 For multiple entries, we will use the `VoodOrm::where()` method to specify where to delete
 
-	$voodorm->where($x, $y)->delete();
+	$users->where("city", "Charlotte")->delete();
 
 ---
 
@@ -213,47 +216,49 @@ VoodOrm gives you access to aggregation methods on your table
 #### *int* ***VoodOrm::count()***
 To count all the entries based on where clause
 
+	$allUsers = $users->count();
+
 	$count = $voodorm->where($x, $y)->count();
 
 or for a specific column name
 
-	$count = $voodorm->where($x, $y)->count($columnName);
+	$count = $users->where($x, $y)->count($columnName);
 
 
 #### *float* ***VoodOrm::max(*** *string $columnName* ***)***
 To get the max of a $columnName based on where() clause
 
-	$max = $voodorm->where($x, $y)->max($columnName);
+	$max = $users->where($x, $y)->max($columnName);
 
 
 #### *float* ***VoodOrm::min(*** *string $columnName* ***)***
 To get the min of a $columnName based on where() clause
 
-	$min = $voodorm->where($x, $y)->min($columnName);
+	$min = $users->where($x, $y)->min($columnName);
 
 
 #### *float* ***VoodOrm::sum(*** *string $columnName* ***)***
 To get the sum of a $columnName based on where() clause
 
-	$sum = $voodorm->where($x, $y)->sum($columnName);
+	$sum = $users->where($x, $y)->sum($columnName);
 
 
 #### *float* ***VoodOrm::avg(*** *string $columnName* ***)***
 To get the average of a $columnName based on where() clause
 
-	$avg = $voodorm->where($x, $y)->avg($columnName);
+	$avg = $users->where($x, $y)->avg($columnName);
 
 #### *mixed* ***VoodOrm::aggregate(*** *string $function* ***)***
 To run any aggregation function
 
-	$agg = $voodorm->where($x, $y)->aggregate('GROUP_CONCAT $columnName');
+	$agg = $users->where($x, $y)->aggregate('GROUP_CONCAT $columnName');
 
 ---
 
 ## Querying
 VoodOrm provides a fluent interface to enable simple queries to be built without writing a single character of SQL. 
 
-Two main methods allow you to get a single entry or multiple entries. 
+Tow methods allow you to get a single entry or multiple entries: `findOne()` and `find()`. And `fromArray()` that load a raw data to the object. 
 
 ---
 ## FindOne
@@ -276,7 +281,7 @@ Let's get the entry found:
 		echo " Hello $user->name!";
 
 	// On a retrieved entry you can perform update and delete
-		$user->last_viewed = $users->DateTime();
+		$user->last_viewed = $users->NOW();
 		$suer->save();
 	}
 
@@ -294,7 +299,7 @@ Let's get the entry found:
 		echo "{$user->name}";
 
 	// On a retrieved entry you can perform update and delete
-		$user->last_viewed = $users->DateTime();
+		$user->last_viewed = $users->NOW();
 		$user->save();
 	}
 
@@ -306,7 +311,7 @@ Let's get the entry found:
 		echo "{$user->name}";
 
 	// On a retrieved entry you can perform update and delete
-		$user->last_viewed = $users->DateTime();
+		$user->last_viewed = $users->NOW();
 		$suer->save();
 	}
 					  
@@ -328,6 +333,28 @@ Let's get the entry found:
 			return $newResults;
 		});	
 
+---
+
+## FromArray
+
+### *VoodOrm* ***VoodOrm::fromArray(*** *Array $data* ***)***
+
+Unlike `find()` and `findOne()` which make a query to the database to retrieve the data, `fromArray()` loads raw the data and returns it as a VoodOrm object. It can be data that is cached into Redis/Memcached, but not coming directly from the database.
+
+	$data = [
+			"id" => 916,
+			"name" => "Jose",
+			"last_name" => "Martinez"
+			];
+
+	$anotherUser = $users->fromArray($data);
+
+Now you can operate on it
+
+	$anotherUse->update(
+						["name" => "Yolo"]
+					);
+
 ---	
 
 ## Fluent Query Builder
@@ -339,15 +366,16 @@ Let's get the entry found:
 ## Select
 
 ### *VoodOrm* ***VoodOrm::select(*** *$columns = '\*'*  ***)***
-To select the fields in the table. If ommitted, VooOrm will fetch all the columns.
+To select the fields in the table. If ommitted, VoodOrm will fetch all the columns.
 
 	$users->select()
 
 or with selected columns
 
-	$users->select("name, age, last_viewed");
+	$users->select("name, age")
+			->select("last_viewed");
 
-	SELECT name, age, last_viewed
+	> SELECT name, age, last_viewed
 
 ---
 
@@ -549,7 +577,7 @@ When building quasi complicated query with multiple set of where, `VoodOrm::wrap
 ## Relationship
 That's the killer!
 
-One of VoodOrm killer feature is Relationship. By calling q table as a method on an object automatically creates a One To Many relationship on that reference table by default.
+One of VoodOrm killer feature is Relationship. By calling a table as a method on an object automatically creates a One To Many relationship on that reference table by default.
 
 For this example we'll have two tables: `user` (id, name, dob) and `friend` (id, user\_id, friend\_id)
 
@@ -723,32 +751,134 @@ Now do the Pot Pourri!
 
 Table structure allows to define the table structure in the database. It is set on the constructor
 
-	new VoodOrm(PDO, $primaryKey = 'id', $foreignKey = '%s_id', $tablePrefix = '')
+	new VoodOrm($PDO, $primaryKey = 'id', $foreignKey = '%s_id')
 
 PRIMARYKEY : by default is set to `id` but can be anything
 
 FOREIGNKEY : Is the foreign key. By default it is set %s_id where %s is the table name. So a table user, in a friend table the foreign key will be `user_id`
 
-TABLEPREFIX : The table prefix
+You can also use `setStructure($primaryKey, $foreignKey)` to set the structure.
 
-You can pass an array in the second param to set the table structure
+	$DB = new VoodOrm($PDO);
+	$DB->setStructure("id", "%s_id");
 
-	new VoodOrm(PDO, array(
-        "primaryKeyName"    => "id",
-        "foreignKeyName"    => "%s_id",
-        "tablePrefix"       => ""
-      ));
+**It is important that a table structure is set, so VoodOrm can identify the primary and foreign keys for relationship.**
 
 ---
-## Advanced
 
-to be added...
+## Other Methods
+
+With the code below:
+
+$users = $DB->table('users');
+
+#### *string* ***VoodOrm::getPrimaryKeyName()***
+	
+	$users->getPrimaryKeyName();
+
+Return the primary key name. Most of the time it will be `id`
 
 
----	
-Credits
+#### *string* ***VoodOrm::getForeignKeyName()***
 
-Thanx to NotORM and Idiorm. They inspired me to make VoodOrm. 
+	$users->getForeignKeyName();
+
+Return the foreign key name. Based on the table stucture above, it will be `user_id`
+
+
+### *string* ***VoodOrm::getTableName()*** 
+
+Returns the table name
+
+	$tableName = $users->getTableName();
+
+
+### *VoodOrm* ***VoodOrm::tableAlias(*** *string $alias* ***)*** 
+To set a name as alias of the table
+
+	$users->tableAlias("user");
+
+
+### *string* ***VoodOrm::getTableAlias()*** 
+
+Returns the table alias name
+
+	$alias = $users->getTableAlias();
+
+
+### *Array* ***VoodOrm::getStructure()*** 
+
+Return the structure that was set
+
+	$structure = $users->getStructure();
+
+### *Bool* ***VoodOrm::isSingleRow()*** 
+
+Return true or false if an entry is a single row
+
+	$user = $users->findOne(123);
+
+	if ($user->isSingleRow()) {
+		// do something here
+	}
+
+
+---
+## Real World Example
+
+to be added... (Extends VoodOrm to your Model)
+
+*Lib/MyNamespace/BaseModel.php*
+
+	namespace MyNamespace;
+
+	use Voodoo;
+
+	abstract class BaseModel extends Voodoo\VoodOrm
+	{
+		private static $pdo = null;
+
+		public function __construct()
+		{
+			if (! self::$pdo) {
+				self::$pdo = new PDO("mysql:host=localhost;dbname=$dbname", $username, $password);
+			    self::$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);				
+			}
+
+			parent::__construct(self::$pdo);
+	        $instance = parent::table($this->tableName);
+	        $this->table_name = $instance->getTablename();			
+		}
+	}
+
+
+*Lib/MyNamespace/Author.php*
+
+	namespace MyNamespace;
+
+	class User extends BaseModel
+	{
+		protected $tableName = "author";
+
+		public function getAuthorName()
+		{
+			return $this->first_name." ".$this->last_name; 
+		}
+	}
+
+
+*Lib/MyNamespace/Book.php*
+
+	namespace MyNamespace;
+
+	class User extends BaseModel
+	{
+		protected $tableName = "book";
+	}
+
+
+
+
 
 ---
 
