@@ -1,13 +1,19 @@
 
-# VoodOrm
+# VoodOrm 2.x.x
+
+#### A simple micro-ORM that stays out of your way
 
 ---
-
-Name: VoodOrm
+ 
+Name: [VoodOrm](http://github.com/mardix/VoodOrm)
 
 License: MIT
 
 Author: [Mardix](http://github.com/mardix)
+
+Version : 2.x.x
+
+Requirements: PHP >= 5.4, PDO
 
 ---
 
@@ -48,6 +54,23 @@ We believe it's best if certain stuff is kept to the developer to do, like cachi
 - No caching
 - No database migration
 
+## Install VoodOrm
+
+You can just download VoodOrm as is, or with Composer. 
+
+To install with composer, add the following in the require key in your **composer.json** file
+
+	"voodoophp/voodorm": "2.*"
+
+composer.json
+
+	{
+	    "name": "voodoophp/myapp",
+	    "description": "My awesome Voodoo App",
+	    "require": {
+	        "voodoophp/voodorm": "2.*"
+	    }
+	}
 
 ---
 ## Working with VoodOrm
@@ -339,7 +362,7 @@ Let's get the entry found:
 
 ### *VoodOrm* ***VoodOrm::fromArray(*** *Array $data* ***)***
 
-Unlike `find()` and `findOne()` which make a query to the database to retrieve the data, `fromArray()` loads raw the data and returns it as a VoodOrm object. It can be data that is cached into Redis/Memcached, but not coming directly from the database.
+Unlike `find()` and `findOne()` which make a query to the database to retrieve the data, `fromArray()` loads raw data and returns it as a VoodOrm object. It can be data that is cached into Redis/Memcached, but not coming directly from the database.
 
 	$data = [
 			"id" => 916,
@@ -822,15 +845,24 @@ Return true or false if an entry is a single row
 		// do something here
 	}
 
+### *String* ***VoodOrm::NOW()*** 
+
+It returns the current DateTime: Y-M-D H:i:s
 
 ---
-## Real World Example
 
-to be added... (Extends VoodOrm to your Model)
+## Extends VoodOrm to your Model
 
-*Lib/MyNamespace/BaseModel.php*
+This is an example below on how you can setup your models with VoodOrm in real world applications. We'll setup the models, and have a controller retrieve them based on an MVC application. The application is base on [Voodoo](http://github.com/mardix/Voodoo), a slim Modular MVC framework in PHP.
 
-	namespace MyNamespace;
+
+**Lib/Model/BaseModel.php:** 
+
+*The base model contains the connection to the DB, and extra methods can be added. BaseModel will be extended in the model classes*
+
+	<?php
+
+	namespace Model;
 
 	use Voodoo;
 
@@ -838,6 +870,7 @@ to be added... (Extends VoodOrm to your Model)
 	{
 		private static $pdo = null;
 
+		// setup the DB connection
 		public function __construct()
 		{
 			if (! self::$pdo) {
@@ -852,43 +885,195 @@ to be added... (Extends VoodOrm to your Model)
 	}
 
 
-*Lib/MyNamespace/Author.php*
+**Lib/Model/Diskoteka/Artist.php**
 
-	namespace MyNamespace;
+	<?php
 
-	class User extends BaseModel
+	namespace Model\Diskoteka;
+
+	use Lib\Model;
+
+	class Artist extends Model\BaseModel
 	{
-		protected $tableName = "author";
+		protected $tableName = "artist";
 
-		public function getAuthorName()
+		// We concat the first and last name
+		public function getName()
 		{
 			return $this->first_name." ".$this->last_name; 
 		}
 	}
 
+**Lib/Model/Diskoteka/Album.php**
 
-*Lib/MyNamespace/Book.php*
+	<?php
 
-	namespace MyNamespace;
+	namespace Model\Diskoteka;
 
-	class User extends BaseModel
+	use Lib\Model;
+
+	class Album extends Model\BaseModel
 	{
-		protected $tableName = "book";
+		protected $tableName = "album";
+
+		// Returns the VoodOrm object to do more in the query
+		public function getSongs()
+		{
+			return (new Song)->where("album_id", $this->getPK());
+		}
+	}
+
+
+**Lib/Model/Diskoteka/Song.php**
+
+	<?php
+
+	namespace Model\Diskoteka;
+
+	use Lib\Model,
+		Closure;
+
+	class Song extends Model\BaseModel
+	{
+		protected $tableName = "song";
+
+		public function getArtistName()
+		{
+			return $this->artist_first_name;
+		}
+
+		public function getAlbumTitle()
+		{
+			return $this->album_title;
+		}
+
+		// We modify the find() to join this table to album and artist tables
+		public function find(Closure $callback = null) 
+		{
+			$this->tableAlias("song")
+				->select("song.*")
+				->select("album.title As album_title")
+				->select("artist.first_name AS artist_first_name")
+				->leftJoin(new Artist, "artist.id = song.artist_id", "artist")
+				->leftJoin(new Album, "album.id = song.album_id", "album");
+
+			retun parent::find($callback);
+		}
 	}
 
 
 
+**App/Www/Main/Controller/Index.php**
 
+*Using [Voodoo](http://github.com/mardix/Voodoo), we'll create a controller to use the models*
+
+	<?php
+
+	namespace App\Www\Main\Controller;
+	
+	use Voodoo,
+		Lib\Model\Diskoteka;
+
+	class Index extends Voodoo\Core\Controller
+	{
+		/**
+		 * List all songs, which will include the the artist name and album name
+		 * http://the-url/
+		 */
+		public function actionIndex()
+		{
+			$allSongs = (new Diskoteka\Song);
+			$allSongs->orderBy("title", "ASC");
+
+			$songs = [];
+			foreach ($allSongs as $song) {
+				$songs[] = [
+					"id" => $song->getPK()
+					"title" => $song->title,
+					"albumTitle" => $song->getAlbumTitle(),
+					"artistName" => $song->getArtistName()
+				];				
+			}
+			$this->view()->assign("songs", $songs);
+		}
+
+		/**
+		 * Simply get the Artist info
+		 * http://the-url/artist/59
+		 */
+		public function actionArtist()
+		{
+			$id = $this->getSegment(1); // -> 59
+			$artist = (new Diskoteka\Artist)->findOne($id);	
+			$countAlbums = (new Diskoteka\Album)
+										->where("artist_id", $id)
+										->count();
+	
+			$this->view()->assign([
+				"name" => $artist->getName(),
+				"countAlbums" => $countAlbums
+			]);	
+		}
+
+
+		/**
+		 * Get the song info, with album basic info
+		 * http://the-url/song/1637
+		 */
+		public function actionSong()
+		{
+			$id = $this->getSegment(1); // -> 1637
+			$song = (new Diskoteka\Song)->findOne($id);
+
+			if ($song) {
+				$this->view()->assign([
+					"id" => $song->getPK()
+					"title" => $song->title,
+					"albumTitle" => $song->getAlbumTitle(),
+					"artistName" => $song->getArtistName()
+				]);
+			}
+		}
+
+		/**
+		 * Get the album info including all songs
+		 * http://your-url.com/album/437
+		 */
+		public function actionAlbum()
+		{
+			$id = $this->getSegment(1);
+			$album = (new Diskoteka\Album)->findOne($id);
+			
+			$allSongs = $album->getSongs();
+			$albumSongs = [];
+			foreach ($allSongs as $song) {
+				$albumSongs[] = [
+					"id" => $song->getPK(),
+					"title" => $song->title
+				];
+			}
+			$this->view()->assign([
+				"album" => [
+					"id" => $album->getPK(),
+					"title" => $album->title
+				],
+				"songs" => $albumSongs
+			]);
+		}
+
+	}
 
 ---
 
 Contributers 
 
-If you would like to contribute, thank you for your interest. Please do a pull request.
+Thank you for your interest in VoodOrm. 
 
----
-
-Coding style
+If you would like to contribute, please do a pull request.
 
 VoodOrm follows closely PSR-2
+
+---
+(c) This Year Mardix :) 
+
 
