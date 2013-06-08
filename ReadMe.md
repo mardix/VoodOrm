@@ -626,7 +626,7 @@ Let's get all the users and their friends
             * SELECT * FROM user WHERE user.id = friend.friend_id LIMIT 1 
             * It will do a ONE to One relationship
             */
-            echo $friend->user(Voodoo\Core\VoodOrm::REL_HASONE, "friend_id")->name;
+            echo $friend->user(Voodoo\VoodOrm::REL_HASONE, "friend_id")->name;
 
             echo "\n";
         }
@@ -640,7 +640,7 @@ Let's get all the users and their friends
 
             echo "{$friend->friend_id} : ";
 
-            echo $friend->user(Voodoo\Core\VoodOrm::REL_HASONE, "friend_id")->name;
+            echo $friend->user(Voodoo\VoodOrm::REL_HASONE, "friend_id")->name;
 
             echo "\n";
         }
@@ -667,14 +667,14 @@ VoodOrm has pre-defined constant that let you select execute a type of relations
 
 *CONST::REL\_HASMANY (2)*
 
-	$allFriends = $user->friend(Voodoo\Core\VoodOrm::REL_HASMANY);
+	$allFriends = $user->friend(Voodoo\VoodOrm::REL_HASMANY);
 
 This is faster. It does an eager loading by fetching all the data and hold the data in memory. It executes only one query. It is used by default.
 
 
 *CONST::REL\_LAZYMANY (-2)*
 
-	$allFriends = $user->friend(Voodoo\Core\VoodOrm::REL_LAZYMANY);
+	$allFriends = $user->friend(Voodoo\VoodOrm::REL_LAZYMANY);
 
 This is slower. It does a lazy loading by fetching the data as it's being requested. It will execute 1+N queries.
 
@@ -696,7 +696,7 @@ It does an eager loading by fetching all the data and hold the data in memory. I
 
 *CONST::REL\_LAZYONE (-1)*
 
-	$friendUser = $friend->user(Voodoo\Core\VoodOrm::REL_LAZYONE, "friend_id");
+	$friendUser = $friend->user(Voodoo\VoodOrm::REL_LAZYONE, "friend_id");
 	echo $friendUser->name;
 
 This is slower. It does a lazy loading by fetching the data as it's being requested. It will execute 1+N queries.
@@ -714,7 +714,7 @@ VoodOrm relationship accept 4 types of parameters that can be placed anywhere:
 
 **NUMBER** : Usually that's the relationship constants `REL_HASONE = 1`, `REL_LAZYONE = -1`, `RE_HASMANY = 2`, `REL_LAZYMANY = -2`;
 
-	$user->friend(Voodoo\Core\VoodOrm::REL_HASMANY);
+	$user->friend(Voodoo\VoodOrm::REL_HASMANY);
 
 **STRING**: Having a tring as an argument will be used as a foreign key name
 
@@ -744,7 +744,7 @@ VoodOrm relationship accept 4 types of parameters that can be placed anywhere:
 
 Now do the Pot Pourri!
 
-	$user->friend(Voodoo\Core\VoodOrm::REL_HASONE, 
+	$user->friend(Voodoo\VoodOrm::REL_HASONE, 
 
 					"friend_id", 
 
