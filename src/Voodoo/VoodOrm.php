@@ -27,12 +27,13 @@ namespace Voodoo;
 use ArrayIterator,
     IteratorAggregate,
     Closure,
-    PDO;
+    PDO,
+    DateTime;
 
 class VoodOrm implements IteratorAggregate
 {
     const NAME              = "VoodOrm";
-    const VERSION           = "2.0";
+    const VERSION           = "2.0.1";
 
     // RELATIONSHIP CONSTANT
     const REL_HASONE        =  1;       // OneToOne. Eager Load data
@@ -1444,17 +1445,14 @@ class VoodOrm implements IteratorAggregate
     /**
      * Return a YYYY-MM-DD HH:II:SS date format
      * 
-     * @param string $strtotime - An english textual datetime description
+     * @param string $datetime - An english textual datetime description
      *          now, yesterday, 3 days ago, +1 week
      *          http://php.net/manual/en/function.strtotime.php
      * @return string YYYY-MM-DD HH:II:SS
      */    
-    public static function NOW($strtotime = "now")
+    public static function NOW($datetime = "now")
     {
-        if (!$strtotime) {
-            $strtotime = "now";
-        }
-        return date("Y-m-d H:i:s", strtotime($strtotime));
+        return (new DateTime($datetime ?: "now"))->format("Y-m-d H:i:s");
     }
 
 
