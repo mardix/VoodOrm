@@ -1,55 +1,54 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8">
+    <meta charset='utf-8'>
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>Voodorm by mardix</title>
-    <link rel="stylesheet" href="stylesheets/styles.css">
-    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-    <script src="javascripts/main.js"></script>
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
     <!--[if lt IE 9]>
-      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-
+    <title>VoodOrm 2.x.x by mardix</title>
   </head>
+
   <body>
+    <div id="container">
+      <div class="inner">
 
-      <header>
-        <h1>Voodorm</h1>
-        <p>VoodOrm: a fluent SQL query builder on top of PDO. It makes writing queries and CRUD painless. Works well with table relationships</p>
-      </header>
+        <header>
+          <h1>VoodOrm 2.x.x</h1>
+          <h2>VoodOrm: a fluent SQL query builder on top of PDO. It makes writing queries and CRUD painless. Works well with table relationships</h2>
+        </header>
 
-      <div id="banner">
-        <span id="logo"></span>
+        <section id="downloads" class="clearfix">
+          <a href="https://github.com/mardix/VoodOrm/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/mardix/VoodOrm/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/mardix/VoodOrm" id="view-on-github" class="button"><span>View on GitHub</span></a>
+        </section>
 
-        <a href="https://github.com/mardix/VoodOrm" class="button fork"><strong>View On GitHub</strong></a>
-        <div class="downloads">
-          <span>Downloads:</span>
-          <ul>
-            <li><a href="https://github.com/mardix/VoodOrm/zipball/master" class="button">ZIP</a></li>
-            <li><a href="https://github.com/mardix/VoodOrm/tarball/master" class="button">TAR</a></li>
-          </ul>
-        </div>
-      </div><!-- end banner -->
+        <hr>
 
-    <div class="wrapper">
-      <nav>
-        <ul></ul>
-      </nav>
-      <section>
-        <h1>VoodOrm</h1>
+        <section id="main_content">
+          <h1>
+<a name="voodorm-2xx" class="anchor" href="#voodorm-2xx"><span class="octicon octicon-link"></span></a>VoodOrm 2.x.x</h1>
 
-<hr><p>Name: VoodOrm</p>
+<h4>
+<a name="a-simple-micro-orm-that-stays-out-of-your-way" class="anchor" href="#a-simple-micro-orm-that-stays-out-of-your-way"><span class="octicon octicon-link"></span></a>A simple micro-ORM that stays out of your way</h4>
 
-<p>version: 0.4.x</p>
+<hr><p>Name: <a href="http://github.com/mardix/VoodOrm">VoodOrm</a></p>
 
 <p>License: MIT</p>
 
 <p>Author: <a href="http://github.com/mardix">Mardix</a></p>
 
-<hr><h2>About Voodoo!</h2>
+<p>Version : 2.x.x</p>
+
+<p>Requirements: PHP &gt;= 5.4, PDO</p>
+
+<hr><h2>
+<a name="about-voodoo" class="anchor" href="#about-voodoo"><span class="octicon octicon-link"></span></a>About Voodoo!</h2>
 
 <p>VoodOrm is a micro-ORM which functions as both a fluent select query API and a CRUD model class.</p>
 
@@ -57,7 +56,8 @@
 is on simplicity and rapid development rather than infinite flexibility and features.
 VoodOrm works easily with table relationship. And offers api that gets SQL out of your way</p>
 
-<hr><h2>Features</h2>
+<hr><h2>
+<a name="features" class="anchor" href="#features"><span class="octicon octicon-link"></span></a>Features</h2>
 
 <ul>
 <li>PDO and prepared statements</li>
@@ -67,38 +67,64 @@ VoodOrm works easily with table relationship. And offers api that gets SQL out o
 <li>Aggregation</li>
 <li>Query debugger and query profiler</li>
 <li>Active Record pattern</li>
-</ul><h2>Requirements</h2>
+</ul><h2>
+<a name="requirements" class="anchor" href="#requirements"><span class="octicon octicon-link"></span></a>Requirements</h2>
 
 <ul>
-<li>PHP &gt;= 5.3</li>
+<li>PHP &gt;= 5.4</li>
 <li>PDO</li>
-</ul><h2>Error Reporting</h2>
+</ul><h2>
+<a name="error-reporting" class="anchor" href="#error-reporting"><span class="octicon octicon-link"></span></a>Error Reporting</h2>
 
 <p>VoodOrm does not escalate errors. Non-existing table produces SQL error that is reported by PDO conforming to PDO::ATTR_ERRMODE. Non-existing columns produces the same E_NOTICE as an attempt to access non-existing key in array.</p>
 
-<h2>What it doesn't do.</h2>
+<h2>
+<a name="what-it-doesnt-do" class="anchor" href="#what-it-doesnt-do"><span class="octicon octicon-link"></span></a>What it doesn't do.</h2>
 
-<p>We believe it's best if certain stuff is kept to the developer to do, like caching or data validation. Also data validation can be done at the database level, like </p>
+<p>We believe it's best if certain stuff is kept to the developer to do, like caching or data validation. Also data validation can be done at the database level.</p>
 
 <ul>
 <li>No models or entities generation</li>
 <li>No data validation</li>
 <li>No caching</li>
 <li>No database migration</li>
-</ul><hr><h2>Working with VoodOrm</h2>
+</ul><h2>
+<a name="install-voodorm" class="anchor" href="#install-voodorm"><span class="octicon octicon-link"></span></a>Install VoodOrm</h2>
+
+<p>You can just download VoodOrm as is, or with Composer. </p>
+
+<p>To install with composer, add the following in the require key in your <strong>composer.json</strong> file</p>
+
+<pre><code>"voodoophp/voodorm": "2.*"
+</code></pre>
+
+<p>composer.json</p>
+
+<pre><code>{
+    "name": "voodoophp/myapp",
+    "description": "My awesome Voodoo App",
+    "require": {
+        "voodoophp/voodorm": "2.*"
+    }
+}
+</code></pre>
+
+<hr><h2>
+<a name="working-with-voodorm" class="anchor" href="#working-with-voodorm"><span class="octicon octicon-link"></span></a>Working with VoodOrm</h2>
 
 <hr><h3>
-<strong><em>new VoodOrm(</em></strong> <em>PDO $pdo</em> <strong><em>)</em></strong>
+<a name="new-voodorm-pdo-pdo-" class="anchor" href="#new-voodorm-pdo-pdo-"><span class="octicon octicon-link"></span></a><strong><em>new VoodOrm(</em></strong> <em>PDO $pdo</em> <strong><em>)</em></strong>
 </h3>
 
 <p>To get started with VoodOrm, you have to setup the PDO connection. We'll be using the variable $DB as the database connection, <code>$users</code> as the table, <code>$friends</code> as another table throughout this whole tutorial</p>
 
 <pre><code>$pdo = new PDO("mysql:host=localhost;dbname=$dbname", $username, $password);
+$pdo-&gt;setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $DB = new VoodOrm($pdo);
 </code></pre>
 
 <hr><h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::table(</em></strong> <em>string $tablename</em> <strong><em>)</em></strong>
+<a name="voodorm-voodormtable-string-tablename-" class="anchor" href="#voodorm-voodormtable-string-tablename-"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::table(</em></strong> <em>string $tablename</em> <strong><em>)</em></strong>
 </h3>
 
 <p>To connect to a table is straight forward by calling the method <code>VoodOrm::table()</code> </p>
@@ -114,12 +140,13 @@ $friends = $DB-&gt;friends();
 
 <p>From there you will be able able to do any CRUD on the table with VoodOrm fluent query interface</p>
 
-<hr><h2>Data Modification</h2>
+<hr><h2>
+<a name="data-modification" class="anchor" href="#data-modification"><span class="octicon octicon-link"></span></a>Data Modification</h2>
 
 <p>VoodOrm supports data modification (insert, update and delete). No data validation is performed by VoodOrm but all database errors are reported by the standard PDO error reporting. For data validation, we believe it's best to validate your data at the database level or application level</p>
 
 <hr><h3>
-<em>mixed</em> <strong><em>VoodOrm::insert(</em></strong> <em>Array $data</em> <strong><em>)</em></strong>
+<a name="mixed-voodorminsert-array-data-" class="anchor" href="#mixed-voodorminsert-array-data-"><span class="octicon octicon-link"></span></a><em>mixed</em> <strong><em>VoodOrm::insert(</em></strong> <em>Array $data</em> <strong><em>)</em></strong>
 </h3>
 
 <p>To insert data in the table, use the <code>insert(Array $data)</code> where <code>$data</code> can be a one dimentional array to insert  just one entry, or a muliple arrays to do mass insert. </p>
@@ -134,7 +161,7 @@ $friends = $DB-&gt;friends();
                 "city" =&gt; "Charlotte",
                 "state" =&gt; "NC",
                 "device" =&gt; "mobile",
-                "timestamp" =&gt; $voodorm-&gt;Datetime()
+                "timestamp" =&gt; $DB-&gt;NOW()
             ));
 </code></pre>
 
@@ -149,21 +176,21 @@ $friends = $DB-&gt;friends();
                          "city" =&gt; "Charlotte",
                          "state" =&gt; "NC",
                          "device" =&gt; "mobile",
-                         "timestamp" =&gt; $voodorm-&gt;Datetime()
+                         "timestamp" =&gt; $DB-&gt;NOW()
                     ),
                     array(
                          "name" =&gt; "Cesar",
                          "city" =&gt; "Atlanta",
                          "state" =&gt; "GA",
                          "device" =&gt; "mobile",
-                         "timestamp" =&gt; $voodorm-&gt;Datetime()
+                         "timestamp" =&gt; $DB-&gt;NOW()
                     ),
                     array(
                          "name" =&gt; "Gaga",
                          "city" =&gt; "Port-au-Prince",
                          "state" =&gt; "HT",
                          "device" =&gt; "computer",
-                         "timestamp" =&gt; $voodorm-&gt;Datetime()
+                         "timestamp" =&gt; $DB-&gt;NOW()
                     ),
                 ));
 </code></pre>
@@ -171,7 +198,7 @@ $friends = $DB-&gt;friends();
 <p>returns the total entries that were inserted</p>
 
 <hr><h3>
-<em>mixed</em> <strong><em>VoodOrm::update(Array $data)</em></strong>
+<a name="mixed-voodormupdatearray-data" class="anchor" href="#mixed-voodormupdatearray-data"><span class="octicon octicon-link"></span></a><em>mixed</em> <strong><em>VoodOrm::update(Array $data)</em></strong>
 </h3>
 
 <p>There are two ways to update entries in VoodOrm, 1) by using the active record pattern for a fetched row, or 2) by using a where query to specify where to update. Also the method <code>VoodOrm::set($key, $value)</code> can be use to set the data before updating.</p>
@@ -189,7 +216,7 @@ $friends = $DB-&gt;friends();
 $user-&gt;update();
 </code></pre>
 
-<p>You can use <code>save()</code> instead of <code>update()</code></p>
+<p>You can also use <code>save()</code> instead of <code>update()</code></p>
 
 <pre><code>$user-&gt;save();
 </code></pre>
@@ -214,10 +241,10 @@ $user-&gt;update();
         -&gt;update();
 </code></pre>
 
-<p>*<em>There are more fluent <code>where</code> aliases under Fluent Query Interface</em></p>
+<p>**There are more fluent <code>where</code> aliases under Fluent Query Interface*</p>
 
 <hr><h3>
-<em>mixed</em> <strong><em>VoodOrm::save()</em></strong>
+<a name="mixed-voodormsave" class="anchor" href="#mixed-voodormsave"><span class="octicon octicon-link"></span></a><em>mixed</em> <strong><em>VoodOrm::save()</em></strong>
 </h3>
 
 <p><code>Save()</code> is a shortcut to <code>VoodOrm::insert()</code> or <code>VoodOrm::update()</code></p>
@@ -238,94 +265,100 @@ $user-&gt;save();
 </code></pre>
 
 <hr><h3>
-<em>int</em> <strong><em>VoodOrm::delete()</em></strong>
+<a name="int-voodormdelete" class="anchor" href="#int-voodormdelete"><span class="octicon octicon-link"></span></a><em>int</em> <strong><em>VoodOrm::delete()</em></strong>
 </h3>
 
 <p>To delete entries we'll use the <code>VoodOrm::delete()</code> method</p>
 
 <p>For single entries, by invoking the <code>delete()</code> method it will delete the current entry</p>
 
-<pre><code>$singleEntry-&gt;delete();
+<pre><code>$user = $users-&gt;reset()-&gt;findOne(1234);
+$user-&gt;delete();
 </code></pre>
 
 <p>For multiple entries, we will use the <code>VoodOrm::where()</code> method to specify where to delete</p>
 
-<pre><code>$voodorm-&gt;where($x, $y)-&gt;delete();
+<pre><code>$users-&gt;where("city", "Charlotte")-&gt;delete();
 </code></pre>
 
-<hr><h2>Aggregation</h2>
+<hr><h2>
+<a name="aggregation" class="anchor" href="#aggregation"><span class="octicon octicon-link"></span></a>Aggregation</h2>
 
 <p>VoodOrm gives you access to aggregation methods on your table</p>
 
 <hr><h4>
-<em>int</em> <strong><em>VoodOrm::count()</em></strong>
+<a name="int-voodormcount" class="anchor" href="#int-voodormcount"><span class="octicon octicon-link"></span></a><em>int</em> <strong><em>VoodOrm::count()</em></strong>
 </h4>
 
 <p>To count all the entries based on where clause</p>
 
-<pre><code>$count = $voodorm-&gt;where($x, $y)-&gt;count();
+<pre><code>$allUsers = $users-&gt;count();
+
+$count = $voodorm-&gt;where($x, $y)-&gt;count();
 </code></pre>
 
 <p>or for a specific column name</p>
 
-<pre><code>$count = $voodorm-&gt;where($x, $y)-&gt;count($columnName);
+<pre><code>$count = $users-&gt;where($x, $y)-&gt;count($columnName);
 </code></pre>
 
 <h4>
-<em>float</em> <strong><em>VoodOrm::max(</em></strong> <em>string $columnName</em> <strong><em>)</em></strong>
+<a name="float-voodormmax-string-columnname-" class="anchor" href="#float-voodormmax-string-columnname-"><span class="octicon octicon-link"></span></a><em>float</em> <strong><em>VoodOrm::max(</em></strong> <em>string $columnName</em> <strong><em>)</em></strong>
 </h4>
 
 <p>To get the max of a $columnName based on where() clause</p>
 
-<pre><code>$max = $voodorm-&gt;where($x, $y)-&gt;max($columnName);
+<pre><code>$max = $users-&gt;where($x, $y)-&gt;max($columnName);
 </code></pre>
 
 <h4>
-<em>float</em> <strong><em>VoodOrm::min(</em></strong> <em>string $columnName</em> <strong><em>)</em></strong>
+<a name="float-voodormmin-string-columnname-" class="anchor" href="#float-voodormmin-string-columnname-"><span class="octicon octicon-link"></span></a><em>float</em> <strong><em>VoodOrm::min(</em></strong> <em>string $columnName</em> <strong><em>)</em></strong>
 </h4>
 
 <p>To get the min of a $columnName based on where() clause</p>
 
-<pre><code>$min = $voodorm-&gt;where($x, $y)-&gt;min($columnName);
+<pre><code>$min = $users-&gt;where($x, $y)-&gt;min($columnName);
 </code></pre>
 
 <h4>
-<em>float</em> <strong><em>VoodOrm::sum(</em></strong> <em>string $columnName</em> <strong><em>)</em></strong>
+<a name="float-voodormsum-string-columnname-" class="anchor" href="#float-voodormsum-string-columnname-"><span class="octicon octicon-link"></span></a><em>float</em> <strong><em>VoodOrm::sum(</em></strong> <em>string $columnName</em> <strong><em>)</em></strong>
 </h4>
 
 <p>To get the sum of a $columnName based on where() clause</p>
 
-<pre><code>$sum = $voodorm-&gt;where($x, $y)-&gt;sum($columnName);
+<pre><code>$sum = $users-&gt;where($x, $y)-&gt;sum($columnName);
 </code></pre>
 
 <h4>
-<em>float</em> <strong><em>VoodOrm::avg(</em></strong> <em>string $columnName</em> <strong><em>)</em></strong>
+<a name="float-voodormavg-string-columnname-" class="anchor" href="#float-voodormavg-string-columnname-"><span class="octicon octicon-link"></span></a><em>float</em> <strong><em>VoodOrm::avg(</em></strong> <em>string $columnName</em> <strong><em>)</em></strong>
 </h4>
 
 <p>To get the average of a $columnName based on where() clause</p>
 
-<pre><code>$avg = $voodorm-&gt;where($x, $y)-&gt;avg($columnName);
+<pre><code>$avg = $users-&gt;where($x, $y)-&gt;avg($columnName);
 </code></pre>
 
 <h4>
-<em>mixed</em> <strong><em>VoodOrm::aggregate(</em></strong> <em>string $function</em> <strong><em>)</em></strong>
+<a name="mixed-voodormaggregate-string-function-" class="anchor" href="#mixed-voodormaggregate-string-function-"><span class="octicon octicon-link"></span></a><em>mixed</em> <strong><em>VoodOrm::aggregate(</em></strong> <em>string $function</em> <strong><em>)</em></strong>
 </h4>
 
 <p>To run any aggregation function</p>
 
-<pre><code>$agg = $voodorm-&gt;where($x, $y)-&gt;aggregate('GROUP_CONCAT $columnName');
+<pre><code>$agg = $users-&gt;where($x, $y)-&gt;aggregate('GROUP_CONCAT $columnName');
 </code></pre>
 
-<hr><h2>Querying</h2>
+<hr><h2>
+<a name="querying" class="anchor" href="#querying"><span class="octicon octicon-link"></span></a>Querying</h2>
 
 <p>VoodOrm provides a fluent interface to enable simple queries to be built without writing a single character of SQL. </p>
 
-<p>Two main methods allow you to get a single entry or multiple entries. </p>
+<p>Tow methods allow you to get a single entry or multiple entries: <code>findOne()</code> and <code>find()</code>. And <code>fromArray()</code> that load a raw data to the object. </p>
 
-<hr><h2>FindOne</h2>
+<hr><h2>
+<a name="findone" class="anchor" href="#findone"><span class="octicon octicon-link"></span></a>FindOne</h2>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::findOne()</em></strong>
+<a name="voodorm-voodormfindone" class="anchor" href="#voodorm-voodormfindone"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::findOne()</em></strong>
 </h3>
 
 <p><code>findOne()</code> returns <code>VoodOrm</code> instance of a single entry if found, otherwise it will return <code>FALSE</code>.</p>
@@ -345,15 +378,16 @@ $user-&gt;save();
     echo " Hello $user-&gt;name!";
 
 // On a retrieved entry you can perform update and delete
-    $user-&gt;last_viewed = $users-&gt;DateTime();
+    $user-&gt;last_viewed = $users-&gt;NOW();
     $suer-&gt;save();
 }
 </code></pre>
 
-<hr><h2>Find</h2>
+<hr><h2>
+<a name="find" class="anchor" href="#find"><span class="octicon octicon-link"></span></a>Find</h2>
 
 <h3>
-<em>ArrayIterator</em> <strong><em>VoodOrm::find()</em></strong>
+<a name="arrayiterator-voodormfind" class="anchor" href="#arrayiterator-voodormfind"><span class="octicon octicon-link"></span></a><em>ArrayIterator</em> <strong><em>VoodOrm::find()</em></strong>
 </h3>
 
 <p><code>find()</code> returns an <code>ArrayIterator</code> of the rows found which are instances of <code>VoodOrm</code>, otherwise it will return <code>False</code>. </p>
@@ -365,7 +399,7 @@ foreach ($allUsers as $user) {
     echo "{$user-&gt;name}";
 
 // On a retrieved entry you can perform update and delete
-    $user-&gt;last_viewed = $users-&gt;DateTime();
+    $user-&gt;last_viewed = $users-&gt;NOW();
     $user-&gt;save();
 }
 </code></pre>
@@ -378,13 +412,13 @@ foreach ($allUsers as $user) {
     echo "{$user-&gt;name}";
 
 // On a retrieved entry you can perform update and delete
-    $user-&gt;last_viewed = $users-&gt;DateTime();
+    $user-&gt;last_viewed = $users-&gt;NOW();
     $suer-&gt;save();
 }
 </code></pre>
 
 <h3>
-<em>mixed</em> <strong><em>VoodOrm::find(</em></strong> <em>Closure $callback</em> <strong><em>)</em></strong>
+<a name="mixed-voodormfind-closure-callback-" class="anchor" href="#mixed-voodormfind-closure-callback-"><span class="octicon octicon-link"></span></a><em>mixed</em> <strong><em>VoodOrm::find(</em></strong> <em>Closure $callback</em> <strong><em>)</em></strong>
 </h3>
 
 <p><code>VoodOrm::find()</code> also accept a Closure as a callback to do your own data manipulation. Upon execution, VoodOrm will pass the data found from the query to the closure function.</p>
@@ -403,27 +437,56 @@ foreach ($allUsers as $user) {
     }); 
 </code></pre>
 
-<hr><h2>Fluent Query Builder</h2>
-
-<hr><h2>Select</h2>
+<hr><h2>
+<a name="fromarray" class="anchor" href="#fromarray"><span class="octicon octicon-link"></span></a>FromArray</h2>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::select(</em></strong> <em>$columns = '\</em>'*  <strong><em>)</em></strong>
+<a name="voodorm-voodormfromarray-array-data-" class="anchor" href="#voodorm-voodormfromarray-array-data-"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::fromArray(</em></strong> <em>Array $data</em> <strong><em>)</em></strong>
 </h3>
 
-<p>To select the fields in the table. If ommitted, VooOrm will fetch all the columns.</p>
+<p>Unlike <code>find()</code> and <code>findOne()</code> which make a query to the database to retrieve the data, <code>fromArray()</code> loads raw data and returns it as a VoodOrm object. It can be data that is cached into Redis/Memcached, but not coming directly from the database.</p>
+
+<pre><code>$data = [
+        "id" =&gt; 916,
+        "name" =&gt; "Jose",
+        "last_name" =&gt; "Martinez"
+        ];
+
+$anotherUser = $users-&gt;fromArray($data);
+</code></pre>
+
+<p>Now you can operate on it</p>
+
+<pre><code>$anotherUse-&gt;update(
+                    ["name" =&gt; "Yolo"]
+                );
+</code></pre>
+
+<hr><h2>
+<a name="fluent-query-builder" class="anchor" href="#fluent-query-builder"><span class="octicon octicon-link"></span></a>Fluent Query Builder</h2>
+
+<hr><h2>
+<a name="select" class="anchor" href="#select"><span class="octicon octicon-link"></span></a>Select</h2>
+
+<h3>
+<a name="voodorm-voodormselect-columns----" class="anchor" href="#voodorm-voodormselect-columns----"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::select(</em></strong> <em>$columns = '\</em>'*  <strong><em>)</em></strong>
+</h3>
+
+<p>To select the fields in the table. If ommitted, VoodOrm will fetch all the columns.</p>
 
 <pre><code>$users-&gt;select()
 </code></pre>
 
 <p>or with selected columns</p>
 
-<pre><code>$users-&gt;select("name, age, last_viewed");
+<pre><code>$users-&gt;select("name, age")
+        -&gt;select("last_viewed");
 
-SELECT name, age, last_viewed
+&gt; SELECT name, age, last_viewed
 </code></pre>
 
-<hr><h2>Where</h2>
+<hr><h2>
+<a name="where" class="anchor" href="#where"><span class="octicon octicon-link"></span></a>Where</h2>
 
 <p><code>Where</code> allow you to set where clauses for the query. Below you will find many aliases for <code>where</code></p>
 
@@ -432,7 +495,7 @@ SELECT name, age, last_viewed
 <p>Repetitive call of <code>where</code> or any <code>where</code> aliases will append the where clause to the previous where by using the AND operator. To use the OR operator instead you must call to <code>VoodOrm::_or()</code>. More below.</p>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::where(</em></strong> <em>$condition $parameters = array()</em>  <strong><em>)</em></strong>
+<a name="voodorm-voodormwhere-condition-parameters--array--" class="anchor" href="#voodorm-voodormwhere-condition-parameters--array--"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::where(</em></strong> <em>$condition $parameters = array()</em>  <strong><em>)</em></strong>
 </h3>
 
 <p>This is the main <code>where</code>. It is responsible for all the wheres.</p>
@@ -459,14 +522,14 @@ WHERE (field1, field2) IN ((?, ?), (?, ?))
 <p>But to facilitate the task, VoodOrm comes with some aliases for common operation:</p>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::wherePK(</em></strong> <em>int $primaryKey</em>  <strong><em>)</em></strong>
+<a name="voodorm-voodormwherepk-int-primarykey--" class="anchor" href="#voodorm-voodormwherepk-int-primarykey--"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::wherePK(</em></strong> <em>int $primaryKey</em>  <strong><em>)</em></strong>
 </h3>
 
 <p>Where the primary key is set
     $users-&gt;wherePK(1234);</p>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::whereNot(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
+<a name="voodorm-voodormwherenot-columnname-value--" class="anchor" href="#voodorm-voodormwherenot-columnname-value--"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::whereNot(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
 </h3>
 
 <pre><code>$users-&gt;whereNot('age', 24);
@@ -475,7 +538,7 @@ WHERE age != ?
 </code></pre>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::whereLike(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
+<a name="voodorm-voodormwherelike-columnname-value--" class="anchor" href="#voodorm-voodormwherelike-columnname-value--"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::whereLike(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
 </h3>
 
 <pre><code>$users-&gt;whereLike('name', 'w%');
@@ -484,7 +547,7 @@ WHERE name LIKE ?
 </code></pre>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::whereNotLike(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
+<a name="voodorm-voodormwherenotlike-columnname-value--" class="anchor" href="#voodorm-voodormwherenotlike-columnname-value--"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::whereNotLike(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
 </h3>
 
 <pre><code>$users-&gt;whereNotLike('name', 'r%');
@@ -493,7 +556,7 @@ WHERE name NOT LIKE ?
 </code></pre>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::whereGt(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
+<a name="voodorm-voodormwheregt-columnname-value--" class="anchor" href="#voodorm-voodormwheregt-columnname-value--"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::whereGt(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
 </h3>
 
 <pre><code>$users-&gt;whereGt('age', 21);
@@ -502,7 +565,7 @@ WHERE age &gt; ?
 </code></pre>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::whereGte(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
+<a name="voodorm-voodormwheregte-columnname-value--" class="anchor" href="#voodorm-voodormwheregte-columnname-value--"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::whereGte(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
 </h3>
 
 <pre><code>$users-&gt;whereGte('age', 21);
@@ -511,7 +574,7 @@ WHERE age &gt;= ?
 </code></pre>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::whereLt(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
+<a name="voodorm-voodormwherelt-columnname-value--" class="anchor" href="#voodorm-voodormwherelt-columnname-value--"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::whereLt(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
 </h3>
 
 <pre><code>$users-&gt;whereLt('age', 21);
@@ -520,7 +583,7 @@ WHERE age &lt; ?
 </code></pre>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::whereLte(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
+<a name="voodorm-voodormwherelte-columnname-value--" class="anchor" href="#voodorm-voodormwherelte-columnname-value--"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::whereLte(</em></strong> <em>$columnName, $value</em>  <strong><em>)</em></strong>
 </h3>
 
 <pre><code>$users-&gt;whereLte('age', 21);
@@ -529,7 +592,7 @@ WHERE age &lt;= ?
 </code></pre>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::whereIn(</em></strong> <em>$columnName, Array $value</em>  <strong><em>)</em></strong>
+<a name="voodorm-voodormwherein-columnname-array-value--" class="anchor" href="#voodorm-voodormwherein-columnname-array-value--"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::whereIn(</em></strong> <em>$columnName, Array $value</em>  <strong><em>)</em></strong>
 </h3>
 
 <pre><code>$users-&gt;whereIn('city', array('Charlotte', 'Atlanta'));
@@ -538,7 +601,7 @@ WHERE city IN (?,?)
 </code></pre>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::whereNotIn(</em></strong> <em>$columnName, Array $value</em>  <strong><em>)</em></strong>
+<a name="voodorm-voodormwherenotin-columnname-array-value--" class="anchor" href="#voodorm-voodormwherenotin-columnname-array-value--"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::whereNotIn(</em></strong> <em>$columnName, Array $value</em>  <strong><em>)</em></strong>
 </h3>
 
 <pre><code>$users-&gt;whereNotIn('city', array('Chicago', 'Miami'));
@@ -547,7 +610,7 @@ WHERE city NOT IN (?,?)
 </code></pre>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::whereNull(</em></strong> <em>$columnName</em>  <strong><em>)</em></strong>
+<a name="voodorm-voodormwherenull-columnname--" class="anchor" href="#voodorm-voodormwherenull-columnname--"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::whereNull(</em></strong> <em>$columnName</em>  <strong><em>)</em></strong>
 </h3>
 
 <pre><code>$users-&gt;whereNull('city');
@@ -556,7 +619,7 @@ WHERE city IS NULL
 </code></pre>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::whereNotNull(</em></strong> <em>$columnName</em>  <strong><em>)</em></strong>
+<a name="voodorm-voodormwherenotnull-columnname--" class="anchor" href="#voodorm-voodormwherenotnull-columnname--"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::whereNotNull(</em></strong> <em>$columnName</em>  <strong><em>)</em></strong>
 </h3>
 
 <pre><code>$users-&gt;whereNotNull('name');
@@ -564,12 +627,13 @@ WHERE city IS NULL
 WHERE city NOT NULL
 </code></pre>
 
-<hr><h2>Where with OR and AND</h2>
+<hr><h2>
+<a name="where-with-or-and-and" class="anchor" href="#where-with-or-and-and"><span class="octicon octicon-link"></span></a>Where with OR and AND</h2>
 
 <p>Building your query, you will want to add AND and OR operator in your where clause. To do so, use <code>VoodOrm::_and()</code> and <code>VoodOrm::_or()</code> chained to any <code>where</code> aliases</p>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::_and()</em></strong>
+<a name="voodorm-voodorm_and" class="anchor" href="#voodorm-voodorm_and"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::_and()</em></strong>
 </h3>
 
 <p>To add the <code>AND</code> operator in a where query. <code>AND</code> is set by default, if not <code>_and()</code> is not called, VoodOrm will add it by default. </p>
@@ -580,7 +644,7 @@ WHERE city = ? AND age &gt;= ?
 </code></pre>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::_or()</em></strong>
+<a name="voodorm-voodorm_or" class="anchor" href="#voodorm-voodorm_or"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::_or()</em></strong>
 </h3>
 
 <p>To add the <code>OR</code> operator in a where query.</p>
@@ -590,12 +654,13 @@ WHERE city = ? AND age &gt;= ?
 WHERE city = ? OR age &gt;= ? OR gender = ?
 </code></pre>
 
-<hr><h2>Where with Wrap()</h2>
+<hr><h2>
+<a name="where-with-wrap" class="anchor" href="#where-with-wrap"><span class="octicon octicon-link"></span></a>Where with Wrap()</h2>
 
 <p>When building quasi complicated query with multiple set of where, <code>VoodOrm::wrap()</code> group the where together in parenthesis. </p>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::wrap()</em></strong>
+<a name="voodorm-voodormwrap" class="anchor" href="#voodorm-voodormwrap"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::wrap()</em></strong>
 </h3>
 
 <pre><code>$users-&gt;where("city", "Charlotte")-&gt;whereGte("age", 21)-&gt;wrap()
@@ -605,7 +670,7 @@ WHERE (city = ? AND age &gt;= ?) AND (gender = ? AND city = ?)
 </code></pre>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::wrap()-&gt;_and()</em></strong>
+<a name="voodorm-voodormwrap-_and" class="anchor" href="#voodorm-voodormwrap-_and"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::wrap()-&gt;_and()</em></strong>
 </h3>
 
 <p><code>wrap()-&gt;_and()</code> does a union with another grouped where with the <code>AND</code> operator.</p>
@@ -617,7 +682,7 @@ WHERE (city = ? AND age &gt;= ?) AND (gender = ? AND city = ?)
 </code></pre>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::wrap()-&gt;_or()</em></strong>
+<a name="voodorm-voodormwrap-_or" class="anchor" href="#voodorm-voodormwrap-_or"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::wrap()-&gt;_or()</em></strong>
 </h3>
 
 <p><code>wrap()-&gt;_or()</code> does a union with another grouped where with the <code>OR</code> operator.</p>
@@ -628,7 +693,8 @@ WHERE (city = ? AND age &gt;= ?) AND (gender = ? AND city = ?)
 WHERE (city = ? AND age &gt;= ?) OR (gender = ? AND city = ?)
 </code></pre>
 
-<h4>wrap()-&gt;_and() and wrap()-&gt;_or() in the same query</h4>
+<h4>
+<a name="wrap-_and-and-wrap-_or-in-the-same-query" class="anchor" href="#wrap-_and-and-wrap-_or-in-the-same-query"><span class="octicon octicon-link"></span></a>wrap()-&gt;_and() and wrap()-&gt;_or() in the same query</h4>
 
 <pre><code>$users-&gt;where("id",1)-&gt;where("city","charlotte")-&gt;wrap()
       -&gt;where("gender","female")-&gt;where("country","US")-&gt;wrap()
@@ -641,10 +707,11 @@ WHERE (id = ? AND city = ?)
       OR (age &lt; ? AND name &gt;= ?) 
 </code></pre>
 
-<hr><h2>Order, Group, Limit, Offset</h2>
+<hr><h2>
+<a name="order-group-limit-offset" class="anchor" href="#order-group-limit-offset"><span class="octicon octicon-link"></span></a>Order, Group, Limit, Offset</h2>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::orderBy(</em></strong> <em>$columnName, $ordering</em>  <strong><em>)</em></strong>
+<a name="voodorm-voodormorderby-columnname-ordering--" class="anchor" href="#voodorm-voodormorderby-columnname-ordering--"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::orderBy(</em></strong> <em>$columnName, $ordering</em>  <strong><em>)</em></strong>
 </h3>
 
 <pre><code>$users-&gt;orderBy('name', 'DESC');
@@ -653,7 +720,7 @@ ORDER BY name DESC
 </code></pre>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::groupBy(</em></strong> <em>$columnName</em>  <strong><em>)</em></strong>
+<a name="voodorm-voodormgroupby-columnname--" class="anchor" href="#voodorm-voodormgroupby-columnname--"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::groupBy(</em></strong> <em>$columnName</em>  <strong><em>)</em></strong>
 </h3>
 
 <pre><code>$users-&gt;groupBy('city');
@@ -662,7 +729,7 @@ GROUP BY city
 </code></pre>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::limit(</em></strong> <em>int $limit</em>  <strong><em>)</em></strong>
+<a name="voodorm-voodormlimit-int-limit--" class="anchor" href="#voodorm-voodormlimit-int-limit--"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::limit(</em></strong> <em>int $limit</em>  <strong><em>)</em></strong>
 </h3>
 
 <pre><code>$users-&gt;limit(10);
@@ -671,7 +738,7 @@ LIMIT 10
 </code></pre>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::offset(</em></strong> <em>int $offset</em>  <strong><em>)</em></strong>
+<a name="voodorm-voodormoffset-int-offset--" class="anchor" href="#voodorm-voodormoffset-int-offset--"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::offset(</em></strong> <em>int $offset</em>  <strong><em>)</em></strong>
 </h3>
 
 <pre><code>$users-&gt;offset(10);
@@ -679,10 +746,11 @@ LIMIT 10
 OFFSET 10
 </code></pre>
 
-<hr><h2>Joins</h2>
+<hr><h2>
+<a name="joins" class="anchor" href="#joins"><span class="octicon octicon-link"></span></a>Joins</h2>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::join(</em></strong> <em>$tablename, $constraint, $table_alias , $join_operator</em> <strong><em>)</em></strong>
+<a name="voodorm-voodormjoin-tablename-constraint-table_alias--join_operator-" class="anchor" href="#voodorm-voodormjoin-tablename-constraint-table_alias--join_operator-"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::join(</em></strong> <em>$tablename, $constraint, $table_alias , $join_operator</em> <strong><em>)</em></strong>
 </h3>
 
 <pre><code>$users-&gt;join('friends', 'f.user_id = u.id', 'f')
@@ -691,7 +759,7 @@ JOIN friends AS f ON f.user_id = u.id
 </code></pre>
 
 <h3>
-<em>VoodOrm</em> <strong><em>VoodOrm::leftJoin(</em></strong> <em>$tablename, $constraint, $table_alias</em> <strong><em>)</em></strong>
+<a name="voodorm-voodormleftjoin-tablename-constraint-table_alias-" class="anchor" href="#voodorm-voodormleftjoin-tablename-constraint-table_alias-"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::leftJoin(</em></strong> <em>$tablename, $constraint, $table_alias</em> <strong><em>)</em></strong>
 </h3>
 
 <pre><code>$users-&gt;leftJoin('friends', 'f.user_id = u.id', 'f')
@@ -699,11 +767,12 @@ JOIN friends AS f ON f.user_id = u.id
 LEFT JOIN friends AS f ON f.user_id = u.id
 </code></pre>
 
-<hr><h2>Relationship</h2>
+<hr><h2>
+<a name="relationship" class="anchor" href="#relationship"><span class="octicon octicon-link"></span></a>Relationship</h2>
 
 <p>That's the killer!</p>
 
-<p>One of VoodOrm killer feature is Relationship. By calling q table as a method on an object automatically creates a One To Many relationship on that reference table by default.</p>
+<p>One of VoodOrm killer feature is Relationship. By calling a table as a method on an object automatically creates a One To Many relationship on that reference table by default.</p>
 
 <p>For this example we'll have two tables: <code>user</code> (id, name, dob) and <code>friend</code> (id, user_id, friend_id)</p>
 
@@ -729,7 +798,7 @@ foreach ($allUsers as $user) {
         * SELECT * FROM user WHERE user.id = friend.friend_id LIMIT 1 
         * It will do a ONE to One relationship
         */
-        echo $friend-&gt;user(Voodoo\Core\VoodOrm::REL_HASONE, "friend_id")-&gt;name;
+        echo $friend-&gt;user(Voodoo\VoodOrm::REL_HASONE, "friend_id")-&gt;name;
 
         echo "\n";
     }
@@ -743,7 +812,7 @@ if($user) {
 
         echo "{$friend-&gt;friend_id} : ";
 
-        echo $friend-&gt;user(Voodoo\Core\VoodOrm::REL_HASONE, "friend_id")-&gt;name;
+        echo $friend-&gt;user(Voodoo\VoodOrm::REL_HASONE, "friend_id")-&gt;name;
 
         echo "\n";
     }
@@ -752,7 +821,8 @@ if($user) {
 
 <p>That's the big picture. Calling a reference table as a method on a object will do a relationship. </p>
 
-<h2>Relationship: <em>One to Many</em>
+<h2>
+<a name="relationship-one-to-many" class="anchor" href="#relationship-one-to-many"><span class="octicon octicon-link"></span></a>Relationship: <em>One to Many</em>
 </h2>
 
 <p>One to many relationship, in our user and friend case, it's where a user can have one or more friends. But each <code>friend.friend_id</code> is associated to one <code>user.id</code>. This type of relationship will return one or more entries. </p>
@@ -770,19 +840,20 @@ if($user) {
 
 <p><em>CONST::REL_HASMANY (2)</em></p>
 
-<pre><code>$allFriends = $user-&gt;friend(Voodoo\Core\VoodOrm::REL_HASMANY);
+<pre><code>$allFriends = $user-&gt;friend(Voodoo\VoodOrm::REL_HASMANY);
 </code></pre>
 
 <p>This is faster. It does an eager loading by fetching all the data and hold the data in memory. It executes only one query. It is used by default.</p>
 
 <p><em>CONST::REL_LAZYMANY (-2)</em></p>
 
-<pre><code>$allFriends = $user-&gt;friend(Voodoo\Core\VoodOrm::REL_LAZYMANY);
+<pre><code>$allFriends = $user-&gt;friend(Voodoo\VoodOrm::REL_LAZYMANY);
 </code></pre>
 
 <p>This is slower. It does a lazy loading by fetching the data as it's being requested. It will execute 1+N queries.</p>
 
-<h2>Relationship: <em>One to One</em>
+<h2>
+<a name="relationship-one-to-one" class="anchor" href="#relationship-one-to-one"><span class="octicon octicon-link"></span></a>Relationship: <em>One to One</em>
 </h2>
 
 <p>One-to-one relationships are single-valued in both directions. In the friend's table, <code>friend.friend_id</code> is linked to <code>user.id</code>  </p>
@@ -802,18 +873,20 @@ echo $friendUser-&gt;name;
 
 <p><em>CONST::REL_LAZYONE (-1)</em></p>
 
-<pre><code>$friendUser = $friend-&gt;user(Voodoo\Core\VoodOrm::REL_LAZYONE, "friend_id");
+<pre><code>$friendUser = $friend-&gt;user(Voodoo\VoodOrm::REL_LAZYONE, "friend_id");
 echo $friendUser-&gt;name;
 </code></pre>
 
 <p>This is slower. It does a lazy loading by fetching the data as it's being requested. It will execute 1+N queries.</p>
 
-<h4>Relationship: <em>Many to Many</em>
+<h4>
+<a name="relationship-many-to-many" class="anchor" href="#relationship-many-to-many"><span class="octicon octicon-link"></span></a>Relationship: <em>Many to Many</em>
 </h4>
 
 <p>Not implemented. That shit is complicated.... can't find a one case fit all... </p>
 
-<h2>Relationship Parameters</h2>
+<h2>
+<a name="relationship-parameters" class="anchor" href="#relationship-parameters"><span class="octicon octicon-link"></span></a>Relationship Parameters</h2>
 
 <p>VoodOrm relationship accept 4 types of parameters that can be placed anywhere:</p>
 
@@ -822,7 +895,7 @@ echo $friendUser-&gt;name;
 
 <p><strong>NUMBER</strong> : Usually that's the relationship constants <code>REL_HASONE = 1</code>, <code>REL_LAZYONE = -1</code>, <code>RE_HASMANY = 2</code>, <code>REL_LAZYMANY = -2</code>;</p>
 
-<pre><code>$user-&gt;friend(Voodoo\Core\VoodOrm::REL_HASMANY);
+<pre><code>$user-&gt;friend(Voodoo\VoodOrm::REL_HASMANY);
 </code></pre>
 
 <p><strong>STRING</strong>: Having a tring as an argument will be used as a foreign key name</p>
@@ -855,7 +928,7 @@ echo $friendUser-&gt;name;
 
 <p>Now do the Pot Pourri!</p>
 
-<pre><code>$user-&gt;friend(Voodoo\Core\VoodOrm::REL_HASONE, 
+<pre><code>$user-&gt;friend(Voodoo\VoodOrm::REL_HASONE, 
 
                 "friend_id", 
 
@@ -880,50 +953,337 @@ echo $friendUser-&gt;name;
 $user-&gt;friend(NUMBER, STRING, ARRAY, CALLBACK);
 </code></pre>
 
-<hr><h2>Table Structure</h2>
+<hr><h2>
+<a name="table-structure" class="anchor" href="#table-structure"><span class="octicon octicon-link"></span></a>Table Structure</h2>
 
 <p>Table structure allows to define the table structure in the database. It is set on the constructor</p>
 
-<pre><code>new VoodOrm(PDO, $primaryKey = 'id', $foreignKey = '%s_id', $tablePrefix = '')
+<pre><code>new VoodOrm($PDO, $primaryKey = 'id', $foreignKey = '%s_id')
 </code></pre>
 
 <p>PRIMARYKEY : by default is set to <code>id</code> but can be anything</p>
 
 <p>FOREIGNKEY : Is the foreign key. By default it is set %s_id where %s is the table name. So a table user, in a friend table the foreign key will be <code>user_id</code></p>
 
-<p>TABLEPREFIX : The table prefix</p>
+<p>You can also use <code>setStructure($primaryKey, $foreignKey)</code> to set the structure.</p>
 
-<p>You can pass an array in the second param to set the table structure</p>
-
-<pre><code>new VoodOrm(PDO, array(
-    "primaryKeyName"    =&gt; "id",
-    "foreignKeyName"    =&gt; "%s_id",
-    "tablePrefix"       =&gt; ""
-  ));
+<pre><code>$DB = new VoodOrm($PDO);
+$DB-&gt;setStructure("id", "%s_id");
 </code></pre>
 
-<hr><h2>Advanced</h2>
+<p><strong>It is important that a table structure is set, so VoodOrm can identify the primary and foreign keys for relationship.</strong></p>
 
-<p>to be added...</p>
+<hr><h2>
+<a name="other-methods" class="anchor" href="#other-methods"><span class="octicon octicon-link"></span></a>Other Methods</h2>
 
-<hr><p>Credits</p>
+<p>With the code below:</p>
 
-<p>Thanx to NotORM and Idiorm. They inspired me to make VoodOrm. </p>
+<p>$users = $DB-&gt;table('users');</p>
+
+<h4>
+<a name="string-voodormgetprimarykeyname" class="anchor" href="#string-voodormgetprimarykeyname"><span class="octicon octicon-link"></span></a><em>string</em> <strong><em>VoodOrm::getPrimaryKeyName()</em></strong>
+</h4>
+
+<pre><code>$users-&gt;getPrimaryKeyName();
+</code></pre>
+
+<p>Return the primary key name. Most of the time it will be <code>id</code></p>
+
+<h4>
+<a name="string-voodormgetforeignkeyname" class="anchor" href="#string-voodormgetforeignkeyname"><span class="octicon octicon-link"></span></a><em>string</em> <strong><em>VoodOrm::getForeignKeyName()</em></strong>
+</h4>
+
+<pre><code>$users-&gt;getForeignKeyName();
+</code></pre>
+
+<p>Return the foreign key name. Based on the table stucture above, it will be <code>user_id</code></p>
+
+<h3>
+<a name="string-voodormgettablename" class="anchor" href="#string-voodormgettablename"><span class="octicon octicon-link"></span></a><em>string</em> <strong><em>VoodOrm::getTableName()</em></strong>
+</h3>
+
+<p>Returns the table name</p>
+
+<pre><code>$tableName = $users-&gt;getTableName();
+</code></pre>
+
+<h3>
+<a name="voodorm-voodormtablealias-string-alias-" class="anchor" href="#voodorm-voodormtablealias-string-alias-"><span class="octicon octicon-link"></span></a><em>VoodOrm</em> <strong><em>VoodOrm::tableAlias(</em></strong> <em>string $alias</em> <strong><em>)</em></strong>
+</h3>
+
+<p>To set a name as alias of the table</p>
+
+<pre><code>$users-&gt;tableAlias("user");
+</code></pre>
+
+<h3>
+<a name="string-voodormgettablealias" class="anchor" href="#string-voodormgettablealias"><span class="octicon octicon-link"></span></a><em>string</em> <strong><em>VoodOrm::getTableAlias()</em></strong>
+</h3>
+
+<p>Returns the table alias name</p>
+
+<pre><code>$alias = $users-&gt;getTableAlias();
+</code></pre>
+
+<h3>
+<a name="array-voodormgetstructure" class="anchor" href="#array-voodormgetstructure"><span class="octicon octicon-link"></span></a><em>Array</em> <strong><em>VoodOrm::getStructure()</em></strong>
+</h3>
+
+<p>Return the structure that was set</p>
+
+<pre><code>$structure = $users-&gt;getStructure();
+</code></pre>
+
+<h3>
+<a name="bool-voodormissinglerow" class="anchor" href="#bool-voodormissinglerow"><span class="octicon octicon-link"></span></a><em>Bool</em> <strong><em>VoodOrm::isSingleRow()</em></strong>
+</h3>
+
+<p>Return true or false if an entry is a single row</p>
+
+<pre><code>$user = $users-&gt;findOne(123);
+
+if ($user-&gt;isSingleRow()) {
+    // do something here
+}
+</code></pre>
+
+<h3>
+<a name="string-voodormnow" class="anchor" href="#string-voodormnow"><span class="octicon octicon-link"></span></a><em>String</em> <strong><em>VoodOrm::NOW()</em></strong>
+</h3>
+
+<p>It returns the current DateTime: Y-M-D H:i:s</p>
+
+<hr><h2>
+<a name="extends-voodorm-to-your-model" class="anchor" href="#extends-voodorm-to-your-model"><span class="octicon octicon-link"></span></a>Extends VoodOrm to your Model</h2>
+
+<p>This is an example below on how you can setup your models with VoodOrm in real world applications. We'll setup the models, and have a controller retrieve them based on an MVC application. The application is base on <a href="http://github.com/mardix/Voodoo">Voodoo</a>, a slim Modular MVC framework in PHP.</p>
+
+<p><strong>Lib/Model/BaseModel.php:</strong> </p>
+
+<p><em>The base model contains the connection to the DB, and extra methods can be added. BaseModel will be extended in the model classes</em></p>
+
+<pre><code>&lt;?php
+
+namespace Model;
+
+use Voodoo;
+
+abstract class BaseModel extends Voodoo\VoodOrm
+{
+    private static $pdo = null;
+
+    // setup the DB connection
+    public function __construct()
+    {
+        if (! self::$pdo) {
+            self::$pdo = new PDO("mysql:host=localhost;dbname=$dbname", $username, $password);
+            self::$pdo-&gt;setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);                
+        }
+
+        parent::__construct(self::$pdo);
+        $instance = parent::table($this-&gt;tableName);
+        $this-&gt;table_name = $instance-&gt;getTablename();          
+    }
+}
+</code></pre>
+
+<p><strong>Lib/Model/Diskoteka/Artist.php</strong></p>
+
+<pre><code>&lt;?php
+
+namespace Model\Diskoteka;
+
+use Lib\Model;
+
+class Artist extends Model\BaseModel
+{
+    protected $tableName = "artist";
+
+    // We concat the first and last name
+    public function getName()
+    {
+        return $this-&gt;first_name." ".$this-&gt;last_name; 
+    }
+}
+</code></pre>
+
+<p><strong>Lib/Model/Diskoteka/Album.php</strong></p>
+
+<pre><code>&lt;?php
+
+namespace Model\Diskoteka;
+
+use Lib\Model;
+
+class Album extends Model\BaseModel
+{
+    protected $tableName = "album";
+
+    // Returns the VoodOrm object to do more in the query
+    public function getSongs()
+    {
+        return (new Song)-&gt;where("album_id", $this-&gt;getPK());
+    }
+}
+</code></pre>
+
+<p><strong>Lib/Model/Diskoteka/Song.php</strong></p>
+
+<pre><code>&lt;?php
+
+namespace Model\Diskoteka;
+
+use Lib\Model,
+    Closure;
+
+class Song extends Model\BaseModel
+{
+    protected $tableName = "song";
+
+    public function getArtistName()
+    {
+        return $this-&gt;artist_first_name;
+    }
+
+    public function getAlbumTitle()
+    {
+        return $this-&gt;album_title;
+    }
+
+    // We modify the find() to join this table to album and artist tables
+    public function find(Closure $callback = null) 
+    {
+        $this-&gt;tableAlias("song")
+            -&gt;select("song.*")
+            -&gt;select("album.title As album_title")
+            -&gt;select("artist.first_name AS artist_first_name")
+            -&gt;leftJoin(new Artist, "artist.id = song.artist_id", "artist")
+            -&gt;leftJoin(new Album, "album.id = song.album_id", "album");
+
+        retun parent::find($callback);
+    }
+}
+</code></pre>
+
+<p><strong>App/Www/Main/Controller/Index.php</strong></p>
+
+<p><em>Using <a href="http://github.com/mardix/Voodoo">Voodoo</a>, we'll create a controller to use the models</em></p>
+
+<pre><code>&lt;?php
+
+namespace App\Www\Main\Controller;
+
+use Voodoo,
+    Lib\Model\Diskoteka;
+
+class Index extends Voodoo\Core\Controller
+{
+    /**
+     * List all songs, which will include the the artist name and album name
+     * http://the-url/
+     */
+    public function actionIndex()
+    {
+        $allSongs = (new Diskoteka\Song);
+        $allSongs-&gt;orderBy("title", "ASC");
+
+        $songs = [];
+        foreach ($allSongs as $song) {
+            $songs[] = [
+                "id" =&gt; $song-&gt;getPK()
+                "title" =&gt; $song-&gt;title,
+                "albumTitle" =&gt; $song-&gt;getAlbumTitle(),
+                "artistName" =&gt; $song-&gt;getArtistName()
+            ];              
+        }
+        $this-&gt;view()-&gt;assign("songs", $songs);
+    }
+
+    /**
+     * Simply get the Artist info
+     * http://the-url/artist/59
+     */
+    public function actionArtist()
+    {
+        $id = $this-&gt;getSegment(1); // -&gt; 59
+        $artist = (new Diskoteka\Artist)-&gt;findOne($id); 
+        $countAlbums = (new Diskoteka\Album)
+                                    -&gt;where("artist_id", $id)
+                                    -&gt;count();
+
+        $this-&gt;view()-&gt;assign([
+            "name" =&gt; $artist-&gt;getName(),
+            "countAlbums" =&gt; $countAlbums
+        ]); 
+    }
+
+
+    /**
+     * Get the song info, with album basic info
+     * http://the-url/song/1637
+     */
+    public function actionSong()
+    {
+        $id = $this-&gt;getSegment(1); // -&gt; 1637
+        $song = (new Diskoteka\Song)-&gt;findOne($id);
+
+        if ($song) {
+            $this-&gt;view()-&gt;assign([
+                "id" =&gt; $song-&gt;getPK()
+                "title" =&gt; $song-&gt;title,
+                "albumTitle" =&gt; $song-&gt;getAlbumTitle(),
+                "artistName" =&gt; $song-&gt;getArtistName()
+            ]);
+        }
+    }
+
+    /**
+     * Get the album info including all songs
+     * http://your-url.com/album/437
+     */
+    public function actionAlbum()
+    {
+        $id = $this-&gt;getSegment(1);
+        $album = (new Diskoteka\Album)-&gt;findOne($id);
+
+        $allSongs = $album-&gt;getSongs();
+        $albumSongs = [];
+        foreach ($allSongs as $song) {
+            $albumSongs[] = [
+                "id" =&gt; $song-&gt;getPK(),
+                "title" =&gt; $song-&gt;title
+            ];
+        }
+        $this-&gt;view()-&gt;assign([
+            "album" =&gt; [
+                "id" =&gt; $album-&gt;getPK(),
+                "title" =&gt; $album-&gt;title
+            ],
+            "songs" =&gt; $albumSongs
+        ]);
+    }
+
+}
+</code></pre>
 
 <hr><p>Contributers </p>
 
-<p>If you would like to contribute, thank you for your interest. Please do a pull request.</p>
+<p>Thank you for your interest in VoodOrm. </p>
 
-<hr><p>Coding style</p>
+<p>If you would like to contribute, please do a pull request.</p>
 
 <p>VoodOrm follows closely PSR-2</p>
-      </section>
-      <footer>
-        <p>Project maintained by <a href="https://github.com/mardix">mardix</a></p>
-        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="http://twitter.com/#!/michigangraham">mattgraham</a></small></p>
-      </footer>
+
+<hr><p>(c) This Year Mardix :) </p>
+        </section>
+
+        <footer>
+          VoodOrm 2.x.x is maintained by <a href="https://github.com/mardix">mardix</a><br>
+          This page was generated by <a href="http://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="http://twitter.com/jasonlong">Jason Long</a>.
+        </footer>
+
+        
+      </div>
     </div>
-    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
-    
   </body>
 </html>
