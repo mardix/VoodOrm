@@ -5,7 +5,7 @@
  * -----------------------------------------------------------------------------
  * @author      Mardix (http://twitter.com/mardix)
  * @github      https://github.com/mardix/VoodOrm
- * @package     VoodooPHP (https://github.com/VoodooPHP/Voodoo/)
+ * @package     VoodooPHP (https://github.com/mardix/Voodoo/)
  *
  * @copyright   (c) 2012 Mardix (http://github.com/mardix)
  * @license     MIT
@@ -33,7 +33,7 @@ use ArrayIterator,
 class VoodOrm implements IteratorAggregate
 {
     const NAME              = "VoodOrm";
-    const VERSION           = "2.0.1";
+    const VERSION           = "2.0.2";
 
     // RELATIONSHIP CONSTANT
     const REL_HASONE        =  1;       // OneToOne. Eager Load data
@@ -1439,6 +1439,7 @@ class VoodOrm implements IteratorAggregate
         $this->last_wrap_position = 0;
         $this->debug_sql_query = false;
         $this->pdo_stmt = null;
+        $this->is_single = false;
         return $this;
     }
 
