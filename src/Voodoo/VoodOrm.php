@@ -33,7 +33,7 @@ use ArrayIterator,
 class VoodOrm implements IteratorAggregate
 {
     const NAME              = "VoodOrm";
-    const VERSION           = "2.0.2";
+    const VERSION           = "2.1.0";
 
     // RELATIONSHIP CONSTANT
     const REL_HASONE        =  1;       // OneToOne. Eager Load data
@@ -1036,18 +1036,26 @@ class VoodOrm implements IteratorAggregate
     /**
      * Delete rows
      * Use the query builder to create the where clause
-     *
+     * @parama bool $deleteAlls = When there is no where condition, setting to true will delete all
      * @return int - total affected rows
      */
-    public function delete()
+    public function delete($deleteAll = false)
     {
         $this->setSingleWhere();
-
-        $query  = "DELETE FROM {$this->table_name}";
-        $query .= $this->getWhereString();
-
-        $this->query($query, $this->getWhereParameters());
         
+        if (count($this->where_conditions)) {
+            $query  = "DELETE FROM {$this->table_name}";
+            $query .= $this->getWhereString();
+            $this->query($query, $this->getWhereParameters());           
+        } else {
+            if ($deleteAll) {
+                $query  = "DELETE FROM {$this->table_name}";
+                $this->query($query);                
+            } else {
+                return false;
+            }
+        }
+
         // Return the SQL Query
         if ($this->debug_sql_query) {
             $this->debugSqlQuery(false);
