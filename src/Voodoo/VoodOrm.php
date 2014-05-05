@@ -7,7 +7,7 @@
  * @github      https://github.com/mardix/VoodOrm
  * @package     VoodooPHP (https://github.com/mardix/Voodoo/)
  *
- * @copyright   (c) 2012 Mardix (http://github.com/mardix)
+ * @copyright   (c) 2014 Mardix (http://github.com/mardix)
  * @license     MIT
  * -----------------------------------------------------------------------------
  *
@@ -33,14 +33,11 @@ use ArrayIterator,
 class VoodOrm implements IteratorAggregate
 {
     const NAME              = "VoodOrm";
-    const VERSION           = "2.1.0";
+    const VERSION           = "2.2.0";
 
     // RELATIONSHIP CONSTANT
-    const REL_HASONE        =  1;       // OneToOne. Eager Load data
-    const REL_LAZYONE       = -1;     // OneToOne. Lazy load data
-    const REL_HASMANY       =  2;      // OneToMany. Eager load data
-    const REL_LAZYMANY      = -2;    // OneToOne. Lazy load data
-    const REL_HASMANYMANY   =  3;  // ManyToMany. Not implemented
+    const HAS_ONE        =  1;       // OneToOne. Eager Load data
+    const HAS_MANY       =  2;      // OneToMany. Eager load data
 
     const OPERATOR_AND = " AND ";
     const OPERATOR_OR  = " OR ";
@@ -943,7 +940,7 @@ class VoodOrm implements IteratorAggregate
         $question_marks = [];
 
         // check if the data is multi dimention for bulk insert
-        $multi = (count($data) != count($data,COUNT_RECURSIVE));
+        $multi = $this->isArrayMultiDim($data);
 
         $datafield = array_keys( $multi ? $data[0] : $data);
 
@@ -1245,177 +1242,126 @@ class VoodOrm implements IteratorAggregate
      * Lazy load will do multiple round to the table.
      *
      * @param  string $tablename
-     * @param  string $arg
-     * @return type
+     * @param  Array $arg
+     *      relationship
+     *      foreignKey
+     *      localKey
+     *      where
+     *      sort
+     *      callback
+     *      model
+     *      backref
+     * @return ArrayIterator | Object | Null
      */
-    public function __call($tablename,$args)
+    public function __call($tablename, $args)
     {
-        /**
-         * On single object we'll create a relationship to the table called
-         * i.e:
-         *  tablename(INT REL_TYPE, STRING foreign_key_name, ARRAY $whereArgs, Closure $callback)
-         *
-         * or
-         *  tablename(foreign_key_name)
-         *
-         * or
-         *  tablename(array("name"=>"hello"))
-         *
-         * or
-         *  tablename(function(res){return $res});
-         */
+        $_def = [
+            "relationship" => self::HAS_MANY, // The type of association: HAS_MANY | HAS_ONE
+            "foreignKey" => "", // the foreign key for the association
+            "localKey" => "", // localKey for the association
+            "where" => [], // Where condition
+            "sort" => "", // Sort of the result
+            "callback" => null, // A callback on the results
+            "model" => null, // An instance VoodOrm class as the class to interact with
+            "backref" => false // When true, it will query in the reverse direction
+        ];
+        $prop = array_merge($_def, $args);
+
         if ($this->is_single) {
-
-            $relationship = self::REL_HASMANY;
-            $foreignKeyN = "";
-            $whereCondition = null;
-            $callback = null;
-
-            /**
-             * Assign vars. Any position should work, but it would be best
-             * if you follow:
-             * tablename(INT REL_TYPE, STRING foreign_key_name, ARRAY $whereArgs)
-             */
-            do {
-                if (isset($args[0])) {
-                    if (($args[0] === self::REL_HASONE) || ($args[0] === self::REL_LAZYONE) ||
-                        ($args[0] === self::REL_HASMANY) || ($args[0] === self::REL_LAZYMANY)
-                    ){
-                        $relationship = $args[0];
-                    } else if (is_string($args[0])) {
-                        $foreignKeyN = $args[0];
-                    } else if (is_array($args[0])){
-                        $whereCondition = $args[0];
-                    } else if ($args[0] instanceof Closure) {
-                        $callback = $args[0];
-                    }                    
-                }
-
-                 
-                array_shift($args);
-
-            } while (count($args));
-
-            switch ($relationship) {
+            switch ($prop["relationship"]) {
                 /**
-                 * By default OneToMany
-                 * OneToMany : Eager Load.
-                 * All data will be loaded. Only does one round to the db table
-                 * Efficient and faster
+                 * OneToMany
                  */
                 default:
-                case self::REL_HASMANY:
+                case self::HAS_MANY:
 
                     $primaryKeyN = $this->getPrimaryKeyname();
-                    $foreignKeyN = ($foreignKeyN) ?: $this->getForeignKeyname();
-
-                    $token = $this->tokenize($tablename,$foreignKeyN.":".$relationship);
+                    $localKeyN = ($prop["localKey"]) ?: $this->getPrimaryKeyname();
+                    $foreignKeyN = ($prop["foreignKey"]) ?: $this->getForeignKeyname();
+                    
+                    $token = $this->tokenize($tablename, $foreignKeyN.":".$prop["relationship"]);
 
                     if (!isset(self::$references[$token])) {
-                        $newInstance = $this->table($tablename);
-                        if (isset($this->reference_keys[$primaryKeyN])) {
-                           $newInstance->where($foreignKeyN, $this->reference_keys[$primaryKeyN]); 
-                        }
                         
-                        if(is_array($whereCondition)){
-                            $newInstance->where($whereCondition);
+                        $model = $prop["model"] ?: $this->table($tablename);
+
+                        // Backref (back reference). Reverse the query
+                        if ($prop["backref"]) {
+                            if (isset($this->reference_keys[$foreignKeyN])) {
+                                $model->where($localKeyN, $this->reference_keys[$foreignKeyN]);
+                            }
+                        } else {
+                            if (isset($this->reference_keys[$localKeyN])) {
+                                $model->where($foreignKeyN, $this->reference_keys[$localKeyN]); 
+                            }
                         }
 
-                        self::$references[$token] = $newInstance->find(function($rows) use ($newInstance,$foreignKeyN,$callback) {
+                        if($prop["where"]) {
+                            $model->where($prop["where"]);
+                        }
+                        if ($prop["sort"]) {
+                            $model->orderBy($prop["sort"]);
+                        }
+                        
+                        self::$references[$token] = $model->find(function($rows) use ($model, $foreignKeyN, $prop) {
                             $results = [];
                             foreach ($rows as $row) {
                                 if(!isset($results[$row[$foreignKeyN]])){
                                     $results[$row[$foreignKeyN]] = new ArrayIterator;
                                 }
-                                $results[$row[$foreignKeyN]]->append(is_callable($callback)
-                                                                     ? $callback($row) : $newInstance->fromArray($row));
+                                $results[$row[$foreignKeyN]]->append(is_callable($prop["callback"])
+                                                                    ? $prop["callback"]($row) 
+                                                                    : $model->fromArray($row));
                             }
                             return $results;
                         });
                     }
-                    return isset(self::$references[$token][$this->{$primaryKeyN}])
-                                ? self::$references[$token][$this->{$primaryKeyN}] : false;
-
-                break;
-
-                /**
-                 * OneToMany: Lazy Load
-                 * Data loaded upon request. Will take multiple rounds the table
-                 */
-                case self::REL_LAZYMANY:
-                    $newInstance = $this->table($tablename)
-                                        ->where($this->getForeignKeyname(),$this->getPK());
-                    if(is_array($whereCondition)){
-                        $newInstance->where($whereCondition);
-                    }
-                    return is_callable($callback) ? $callback($newInstance) : $newInstance;
-                break;
+                    return isset(self::$references[$token][$this->{$localKeyN}])
+                                ? self::$references[$token][$this->{$localKeyN}] 
+                                : new ArrayIterator;
+                    break;
 
                 /**
-                 * OneToOne: Eager Load
-                 * All data will be loaded. Only does one round to the db table
-                 * Efficient and faster
+                 * OneToOne
                  */
-                case self::REL_HASONE:
-                    if(! $foreignKeyN) {
-                        $foreignKeyN = $this->formatKeyname($this->getStructure()["foreignKeyname"], $tablename);
-                    }
-                    
+                case self::HAS_ONE:
+                    $foreignKeyN = ($prop["foreignKey"]) ?: $this->formatKeyname($this->getStructure()["foreignKeyname"], $tablename);
+
                     if (isset($this->{$foreignKeyN})) {
-
+                        
+                        $model = $prop["model"] ?: $this->table($tablename);
+                        
                         $token = $this->tokenize($tablename,$foreignKeyN.":".$relationship);
 
                         // Voodoo
                         if (!isset(self::$references[$token])) {
 
-                            $newInstance = $this->table($tablename);
-                            $primaryKeyN = $newInstance->getprimaryKeyname();
+                            $primaryKeyN = $model->getprimaryKeyname();
+                            $localKeyN = ($prop["localKey"]) ?: $model->getPrimaryKeyname();
                             
                             if (isset($this->reference_keys[$foreignKeyN])) {
-                               $newInstance->where($primaryKeyN, $this->reference_keys[$foreignKeyN]); 
+                               $model->where($localKeyN, $this->reference_keys[$foreignKeyN]); 
                             }                            
-                            
-                            if(is_array($whereCondition)){
-                                $newInstance->where($whereCondition);
-                            }
 
-                            self::$references[$token] = $newInstance->find(function($rows) use ($newInstance,$callback) {
+                            self::$references[$token] = $model->find(function($rows) use ($model,$callback, $localKeyN) {
                                $results = [];
                                foreach ($rows as $row) {
-                                    $results[$row[$newInstance->getPrimaryKeyname()]] =  is_callable($callback)
-                                                                                ? $callback($row)
-                                                                                : $newInstance->fromArray($row);
+                                    $results[$row[$localKeyN]] = is_callable($callback)
+                                                                    ? $callback($row)
+                                                                    : $model->fromArray($row);
                                }
-
                                return $results;
                             });
                         }
-
                         return self::$references[$token][$this->{$foreignKeyN}];
                     } else {
                         return null;
                     }
 
-                break;
-
-                /**
-                 * OneToOne: Lazy Load
-                 * Data loaded upon request. Will take multiple rounds the table
-                 */
-                case self::REL_LAZYONE:
-                    $newInstance = $this->table($tablename)
-                                        ->wherePK($this->{$foreignKeyN});
-                    if(is_array($whereCondition)){
-                        $newInstance->where($whereCondition);
-                    }
-
-                    $one = $newInstance->findOne();
-
-                    return is_callback($callback) ? $callback($one) : $one;
-                break;
+                    break;
             }
         } else {
-            return $this->table($tablename);
+            return $prop["model"] ?: $this->table($tablename);
         }
 
     }
@@ -1555,4 +1501,13 @@ class VoodOrm implements IteratorAggregate
     {
         return $this->is_single ? $this->getPK() : $this->table_name;
     }    
+    
+    /**
+     * Check if aray is multi dim
+     * @param array $data
+     * @return bool
+     */
+    private function isArrayMultiDim(Array $data){
+        return (count($data) != count($data,COUNT_RECURSIVE));
+    }
 }
