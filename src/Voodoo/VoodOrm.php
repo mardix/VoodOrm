@@ -41,7 +41,7 @@ class VoodOrm implements IteratorAggregate
 
     const OPERATOR_AND = " AND ";
     const OPERATOR_OR  = " OR ";
-    const ORDERBY_ASC = "ASC";
+    const ORDERBY_ASC  = "ASC";
     const ORDERBY_DESC = "DESC";
     
     protected $pdo = null;
@@ -69,7 +69,6 @@ class VoodOrm implements IteratorAggregate
     private $sql_query = "";
     private $sql_parameters = [];
     private $_dirty_fields = [];
-    private $query_profiler = [];
     private $reference_keys = [];
     private static $references = []; 
     
@@ -209,23 +208,8 @@ class VoodOrm implements IteratorAggregate
         if ($this->debug_sql_query) {
             return $this;
         } else {
-            $_stime = microtime(true);
             $this->pdo_stmt = $this->pdo->prepare($query);
             $this->pdo_executed = $this->pdo_stmt->execute($parameters);
-            $_time = microtime(true) - $_stime;
-
-            // query profiler
-            if (! isset($this->query_profiler["total_time"])){
-                $this->query_profiler["total_time"] = 0;
-            }
-            $this->query_profiler[] = [
-                "query"         => $query,
-                "params"        => $parameters,
-                "affected_rows" => $this->rowCount(),
-                "time"          => $_time
-            ];
-            $this->query_profiler["total_time"] = $this->query_profiler["total_time"] + $_time;
-            
             if ($return_as_pdo_stmt) {
                 return $this->pdo_stmt;
             } else {
@@ -1033,7 +1017,7 @@ class VoodOrm implements IteratorAggregate
     /**
      * Delete rows
      * Use the query builder to create the where clause
-     * @parama bool $deleteAlls = When there is no where condition, setting to true will delete all
+     * @param bool $deleteAll = When there is no where condition, setting to true will delete all
      * @return int - total affected rows
      */
     public function delete($deleteAll = false)
@@ -1274,8 +1258,6 @@ class VoodOrm implements IteratorAggregate
                  */
                 default:
                 case self::HAS_MANY:
-
-                    $primaryKeyN = $this->getPrimaryKeyname();
                     $localKeyN = ($prop["localKey"]) ?: $this->getPrimaryKeyname();
                     $foreignKeyN = ($prop["foreignKey"]) ?: $this->getForeignKeyname();
                     
@@ -1295,7 +1277,6 @@ class VoodOrm implements IteratorAggregate
                                 $model->where($foreignKeyN, $this->reference_keys[$localKeyN]); 
                             }
                         }
-
                         if($prop["where"]) {
                             $model->where($prop["where"]);
                         }
@@ -1321,43 +1302,34 @@ class VoodOrm implements IteratorAggregate
                                 : new ArrayIterator;
                     break;
 
-                /**
-                 * OneToOne
-                 */
                 case self::HAS_ONE:
-                    $foreignKeyN = ($prop["foreignKey"]) ?: $this->formatKeyname($this->getStructure()["foreignKeyname"], $tablename);
-
-                    if (isset($this->{$foreignKeyN})) {
-                        
+                    $localKeyN = $prop["localKey"] ?: $this->formatKeyname($this->getStructure()["foreignKeyname"], $tablename);
+                    
+                    if (isset($this->{$localKeyN}) && $this->{$localKeyN}) {
                         $model = $prop["model"] ?: $this->table($tablename);
+                        $foreignKeyN = $prop["foreignKey"] ?: $model->getPrimaryKeyname();
                         
-                        $token = $this->tokenize($tablename,$foreignKeyN.":".$relationship);
+                        $token = $this->tokenize($tablename, $localKeyN . ":" . $prop["relationship"]);
 
-                        // Voodoo
-                        if (!isset(self::$references[$token])) {
-
-                            $primaryKeyN = $model->getprimaryKeyname();
-                            $localKeyN = ($prop["localKey"]) ?: $model->getPrimaryKeyname();
-                            
-                            if (isset($this->reference_keys[$foreignKeyN])) {
-                               $model->where($localKeyN, $this->reference_keys[$foreignKeyN]); 
+                        if (! isset(self::$references[$token])) {
+                            if (isset($this->reference_keys[$localKeyN])) {
+                               $model->where($foreignKeyN, $this->reference_keys[$localKeyN]); 
                             }                            
-
-                            self::$references[$token] = $model->find(function($rows) use ($model,$callback, $localKeyN) {
+                            
+                            self::$references[$token] = $model->find(function($rows) use ($model, $callback, $foreignKeyN) {
                                $results = [];
                                foreach ($rows as $row) {
-                                    $results[$row[$localKeyN]] = is_callable($callback)
+                                    $results[$row[$foreignKeyN]] = is_callable($callback)
                                                                     ? $callback($row)
                                                                     : $model->fromArray($row);
                                }
                                return $results;
                             });
                         }
-                        return self::$references[$token][$this->{$foreignKeyN}];
+                        return self::$references[$token][$this->{$localKeyN}];
                     } else {
                         return null;
                     }
-
                     break;
             }
         } else {
@@ -1447,15 +1419,6 @@ class VoodOrm implements IteratorAggregate
         return $this->sql_parameters;
     }
     
-    /**
-     * To profile all queries that have been executed
-     *
-     * @return Array
-     */
-    public function getQueryProfiler()
-    {
-        return $this->query_profiler;
-    }
 /*******************************************************************************/
     /**
      * Return a string containing the given number of question marks,
