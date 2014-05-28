@@ -1,5 +1,5 @@
 
-# VoodOrm 2.x.x
+# VoodOrm 3.x.x
 
 #### A simple micro-ORM that stays out of your way
 
@@ -11,9 +11,9 @@ License: MIT
 
 Author: [Mardix](http://github.com/mardix)
 
-Version : 2.x.x
+Version : 3.x.x
 
-Requirements: PHP >= 5.4, PDO
+Requirements: PHP >= 5.5, PDO
 
 ---
 
@@ -39,7 +39,7 @@ VoodOrm works easily with table relationship. And offers api that gets SQL out o
 
 ## Requirements
 
-- PHP >= 5.4
+- PHP >= 5.5
 - PDO
 
 ## Error Reporting
@@ -60,7 +60,7 @@ You can just download VoodOrm as is, or with Composer.
 
 To install with composer, add the following in the require key in your **composer.json** file
 
-	"voodoophp/voodorm": "2.*"
+	"voodoophp/voodorm": "3.*"
 
 composer.json
 
@@ -68,7 +68,7 @@ composer.json
 	    "name": "voodoophp/myapp",
 	    "description": "My awesome Voodoo App",
 	    "require": {
-	        "voodoophp/voodorm": "2.*"
+	        "voodoophp/voodorm": "3.*"
 	    }
 	}
 
@@ -626,7 +626,9 @@ Let's get all the users and their friends
             * SELECT * FROM user WHERE user.id = friend.friend_id LIMIT 1 
             * It will do a ONE to One relationship
             */
-            echo $friend->user(Voodoo\VoodOrm::REL_HASONE, "friend_id")->name;
+            echo $friend->user(["relationship" => Voodoo\VoodOrm::HAS_ONE, 
+                                "localKey" => "friend_id"
+                                "foreignKey" => "id"])->name;
 
             echo "\n";
         }
@@ -665,19 +667,11 @@ Relationship Constants
 
 VoodOrm has pre-defined constant that let you select execute a type of relationship
 
-*CONST::REL\_HASMANY (2)*
+*CONST::HAS_MANY (2)*
 
-	$allFriends = $user->friend(Voodoo\VoodOrm::REL_HASMANY);
+	$allFriends = $user->friend(["relationship" => Voodoo\VoodOrm::HAS_MANY]);
 
 This is faster. It does an eager loading by fetching all the data and hold the data in memory. It executes only one query. It is used by default.
-
-
-*CONST::REL\_LAZYMANY (-2)*
-
-	$allFriends = $user->friend(Voodoo\VoodOrm::REL_LAZYMANY);
-
-This is slower. It does a lazy loading by fetching the data as it's being requested. It will execute 1+N queries.
-
 
 
 ## Relationship: *One to One*
@@ -687,7 +681,7 @@ One-to-one relationships are single-valued in both directions. In the friend's t
 
 Relationship Constants
 
-*CONST::REL\_HASONE (1)*
+*CONST::HAS_ONE (1)*
 
 	$friendUser = $friend->user(Voodoo\Core\VoodOrm::REL_HASONE, "friend_id");
 	echo $friendUser->name;
