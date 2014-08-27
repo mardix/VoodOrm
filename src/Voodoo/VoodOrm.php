@@ -210,16 +210,14 @@ class VoodOrm implements IteratorAggregate
 
         if ($this->debug_sql_query) {
             return $this;
-        } else {
-            $this->pdo_stmt = $this->pdo->prepare($query);
-            $this->pdo_executed = $this->pdo_stmt->execute($parameters);
-            if ($return_as_pdo_stmt) {
-                return $this->pdo_stmt;
-            } else {
-                $this->is_fluent_query = true;
-                return $this;
-            }        
         }
+        $this->pdo_stmt = $this->pdo->prepare($query);
+        $this->pdo_executed = $this->pdo_stmt->execute($parameters);
+        if ($return_as_pdo_stmt) {
+            return $this->pdo_stmt;
+        }
+        $this->is_fluent_query = true;
+        return $this;
     }
     
     /**
@@ -258,47 +256,48 @@ class VoodOrm implements IteratorAggregate
         if ($this->debug_sql_query) {
             $this->debugSqlQuery(false);
             return false;
-        } else {
-            if ($this->pdo_executed == true) {
-                $allRows = $this->pdo_stmt->fetchAll(PDO::FETCH_ASSOC);
-                $this->reset();
-                if (is_callable($callback)) {
-                    return $callback($allRows);
-                } else {
-                    if(count($allRows)) {
-                        // Holding all foreign keys matching the structure
-                        $matchForeignKey = function($key) {
-                            return preg_match("/".str_replace("%s","[a-z]", $this->table_structure["foreignKeyname"])."/i", $key);  
-                        };
-                        foreach ($allRows as $index => &$row) {
-                            if ($index == 0) {
-                                $this->reference_keys = [$this->table_structure["primaryKeyname"] => []];
-                                foreach(array_keys($row) as $_rowK) {
-                                    if ($matchForeignKey($_rowK)) {
-                                        $this->reference_keys[$_rowK] = [];
-                                    }
-                                }
-                            }
-                            foreach($row as $rowK => &$rowV) {
-                                if(array_key_exists($rowK, $this->reference_keys)) {
-                                    $this->reference_keys[$rowK][] = $rowV;
-                                    $this->reference_keys[$rowK] = array_unique($this->reference_keys[$rowK]);
-                                }
-                            }
-                        }
-                        unset($row);
-                        $rowsObject = [];
-                        foreach ($allRows as $row) {
-                            $rowsObject[] = $this->fromArray($row);
-                        }
-                        return new ArrayIterator($rowsObject);
+        }
+        if ($this->pdo_executed != true) {
+            return false;
+        }
+
+        $allRows = $this->pdo_stmt->fetchAll(PDO::FETCH_ASSOC);
+        $this->reset();
+
+        if (is_callable($callback)) {
+            return $callback($allRows);
+        }
+
+        if(!count($allRows)) {
+            return ArrayIterator;
+        }
+
+        // Holding all foreign keys matching the structure
+        $matchForeignKey = function($key) {
+            return preg_match("/".str_replace("%s","[a-z]", $this->table_structure["foreignKeyname"])."/i", $key);
+        };
+        foreach ($allRows as $index => &$row) {
+            if ($index == 0) {
+                $this->reference_keys = [$this->table_structure["primaryKeyname"] => []];
+                foreach(array_keys($row) as $_rowK) {
+                    if ($matchForeignKey($_rowK)) {
+                        $this->reference_keys[$_rowK] = [];
                     }
-                    return new ArrayIterator;           
                 }
-            } else {
-                return false;
-            }       
-        }      
+            }
+            foreach($row as $rowK => &$rowV) {
+                if(array_key_exists($rowK, $this->reference_keys)) {
+                    $this->reference_keys[$rowK][] = $rowV;
+                    $this->reference_keys[$rowK] = array_unique($this->reference_keys[$rowK]);
+                }
+            }
+        }
+        unset($row);
+        $rowsObject = [];
+        foreach ($allRows as $row) {
+            $rowsObject[] = $this->fromArray($row);
+        }
+        return new ArrayIterator($rowsObject);
     }
     
     /**
@@ -317,10 +316,9 @@ class VoodOrm implements IteratorAggregate
         if ($this->debug_sql_query) {
             $this->find();
             return false;
-        } else {
-            $findAll = $this->find();
-            return $findAll->valid() ? $findAll->offsetGet(0) : false;
         }
+        $findAll = $this->find();
+        return $findAll->valid() ? $findAll->offsetGet(0) : false;
     }
     
     /**
@@ -1010,10 +1008,9 @@ class VoodOrm implements IteratorAggregate
         if ($this->debug_sql_query) {
             $this->debugSqlQuery(false);
             return $this;
-        } else {
-            $this->_dirty_fields = [];
-            return $this->rowCount();            
         }
+        $this->_dirty_fields = [];
+        return $this->rowCount();
     }
 
 /*------------------------------------------------------------------------------
@@ -1046,9 +1043,8 @@ class VoodOrm implements IteratorAggregate
         if ($this->debug_sql_query) {
             $this->debugSqlQuery(false);
             return $this;
-        } else {
-           return $this->rowCount(); 
         }
+        return $this->rowCount();
     }
     
 /*------------------------------------------------------------------------------
@@ -1086,9 +1082,8 @@ class VoodOrm implements IteratorAggregate
     {
         if ($this->is_single || count($this->where_conditions)) {
             return $this->update();
-        } else {
-            return $this->insert($this->_dirty_fields);
         }
+        return $this->insert($this->_dirty_fields);
     }    
 
 
@@ -1320,7 +1315,7 @@ class VoodOrm implements IteratorAggregate
                             if (isset($this->reference_keys[$localKeyN])) {
                                $model->where($foreignKeyN, $this->reference_keys[$localKeyN]); 
                             }                            
-                            
+                            // $callback isn't set
                             self::$references[$token] = $model->find(function($rows) use ($model, $callback, $foreignKeyN) {
                                $results = [];
                                foreach ($rows as $row) {
