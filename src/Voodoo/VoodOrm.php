@@ -269,7 +269,7 @@ class VoodOrm implements IteratorAggregate
         }
 
         if(!count($allRows)) {
-            return ArrayIterator;
+            return new ArrayIterator;
         }
 
         // Holding all foreign keys matching the structure
@@ -1235,7 +1235,7 @@ class VoodOrm implements IteratorAggregate
      *      callback
      *      model
      *      backref
-     * @return ArrayIterator | Object | Null
+     * @return \ArrayIterator | Object | Null
      */
     public function __call($tablename, $args)
     {
