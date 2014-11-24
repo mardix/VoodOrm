@@ -25,76 +25,281 @@
 namespace Terah\FluentModel;
 
 
-use Closure,
-    PDO,
-    DateTime;
+use Closure;
+use PDO;
+use DateTime;
+use Utilities;
 
 
 class FluentModel
 {
-    const NAME              = "FluentModel";
-    const VERSION           = "0.1";
+    const NAME                  = 'FluentModel';
+    const VERSION               = '0.1';
 
     // RELATIONSHIP CONSTANT
     const HAS_ONE               =  1;       // OneToOne. Eager Load data
     const HAS_MANY              =  2;      // OneToMany. Eager load data
 
-    const OPERATOR_AND          = " AND ";
-    const OPERATOR_OR           = " OR ";
-    const ORDERBY_ASC           = "ASC";
-    const ORDERBY_DESC          = "DESC";
+    const OPERATOR_AND          = ' AND ';
+    const OPERATOR_OR           = ' OR ';
+    const ORDERBY_ASC           = 'ASC';
+    const ORDERBY_DESC          = 'DESC';
+    const SAVE_INSERT           = 'INSERT';
+    const SAVE_UPDATE           = 'UPDATE';
 
-    /* @var \PDO $pdo */
-    protected $pdo              = null;
-    /* @var \PDOStatement $pdo_stmt*/
-    private $pdo_stmt           = null;
-    /* @var string protected $table_name */
-    protected $table_name       = "";
-    private $table_token        = "";
-    protected $table_alias      = "";
-    protected $is_single        = false;
-    private $select_fields      = [];
-    private $join_sources       = [];
-    private $limit              = null;
-    private $offset             = null;
-    private $order_by           = [];
-    private $group_by           = [];
-    private $where_parameters   = [];
-    private $where_conditions   = [];
-    private $and_or_operator    = self::OPERATOR_AND;
-    private $having             = [];
-    private $wrap_open          = false;
-    private $last_wrap_position = 0;
-    private $is_fluent_query    = true;
-    private $pdo_executed       = false;
-    private $_data              = [];
-    private $debug_sql_query    = false;
-    private $sql_query          = "";
-    private $sql_parameters     = [];
-    private $_dirty_fields      = [];
-    private $reference_keys     = [];
-    private static $references  = [];
+    /* @var \PDO $_pdo */
+    protected $_pdo                 = null;
+    /* @var \PDOStatement $_pdo_stmt*/
+    private $_pdo_stmt              = null;
+    private $_table_token           = '';
+    private $_select_fields         = [];
+    private $_join_sources          = [];
+    private $_limit                 = null;
+    private $_offset                = null;
+    private $_order_by              = [];
+    private $_group_by              = [];
+    private $_where_parameters      = [];
+    private $_where_conditions      = [];
+    private $_and_or_operator       = self::OPERATOR_AND;
+    private $_having                = [];
+    private $_wrap_open             = false;
+    private $_last_wrap_position    = 0;
+    private $_is_fluent_query       = true;
+    private $_pdo_executed          = false;
+    private $_data                  = [];
+    private $_debug_sql_query       = false;
 
+    private $_sql_query             = '';
+    private $_sql_parameters        = [];
+    private $_dirty_fields          = [];
+    private $_reference_keys        = [];
+    private static $_references     = [];
+    protected $_distinct            = false;
+    protected $_errors              = [];
+
+    protected $_table_alias         = '';
+    protected $_is_single           = false;
+    protected $_connection          = null;
+    protected $_table_name          = null;
+    protected $_display_column      = null;
+    protected $_auto_joins          = [];
+    protected $_rules               = [];
+
+    protected $_read_only           = false;
+    protected $_verbose             = false;
     // Table structure
-    public $table_structure = [
-        "primaryKeyname"    => "id",
-        "foreignKeyname"    => "%s_id"
+    public $table_structure         = [
+        'primaryKeyname'    => 'id',
+        'foreignKeyname'    => '%s_id'
     ];
 
-/*******************************************************************************/
+    /**
+     * @var \PDO[]
+     */
+    protected static $_pdo_conns        = null;
+    protected static $_model_namespace  = null;
+    /**
+     * @param array $config
+     *
+     * @throws \Exception
+     */
+    static public function init(array $config, $model_namespace=null)
+    {
+        foreach ( $config as $connection => $connection_config )
+        {
+            \Assert\that($connection_config)->keysExist(['host', 'host', 'port', 'name', 'user', 'driver', 'log_queries']);
+            static::addConnection($connection, static::getPdoFromConf($connection_config), $connection_config['log_queries']);
+        }
+        static::$_model_namespace = $model_namespace;
+    }
+
 
     /**
-     * Constructor & set the table structure
+     * Load a model via it's static interface
      *
-     * @param PDO    $pdo            - The PDO connection
-     * @param string $primaryKeyName - Structure: table primary. If its an array, it must be the structure
-     * @param string $foreignKeyName - Structure: table foreignKeyName.
-     *                  It can be like %s_id where %s is the table name
+     * @param array $settings
+     *
+     * @return FluentModel
      */
-    public function __construct(PDO $pdo, $primaryKeyName = "id", $foreignKeyName = "%s_id")
+    public static function load(array $settings=[])
     {
-        $this->pdo = $pdo;
+        $called_class_name   = get_called_class();
+        return new $called_class_name($settings);
+    }
+
+    /**
+     * Load a model by it's table name
+     *
+     * @param $table_name
+     *
+     * @return mixed
+     * @throws \Exception
+     */
+    public static function loadModel($table_name)
+    {
+        $model_name = static::getFullModelName($table_name);
+        $model_obj  = new $model_name;
+        if ( !( $model_obj instanceof FluentModel ) )
+        {
+            throw new \Exception();
+        }
+        return $model_obj;
+    }
+
+    public static function getFullModelName($table_name)
+    {
+        return static::$_model_namespace . Utilities\Inflector::classify($table_name);
+    }
+
+    /**
+     * Add a pdo connection to the pool
+     *
+     * @param      $name
+     * @param PDO  $pdo
+     * @param bool $log_queries
+     */
+    static public function addConnection($name, \PDO $pdo, $log_queries=false)
+    {
+        \Assert\that($name)->string()->notEmpty();
+        \Assert\that($log_queries)->boolean();
+
+        $pdo->log_queries = $log_queries;
+        static::$_pdo_conns[$name] = $pdo;
+    }
+
+    static public function getPdoConnection($name)
+    {
+        \Assert\that($name)->string()->notEmpty();
+        \Assert\that(static::$_pdo_conns)->keyExists($name);
+        return static::$_pdo_conns[$name];
+    }
+
+    /**
+     * Create a pdo instance from config array
+     *
+     * @param array $connection_config
+     *
+     * @return null|PDO|\PDOOCI\PDO
+     */
+    static protected function getPdoFromConf(array $connection_config)
+    {
+        \Assert\that($connection_config)->keysExist(['host', 'port', 'name', 'pass', 'user', 'driver', 'log_queries']);
+        \Assert\that($connection_config['driver'])->inArray(['PDOMYSQL', 'PDOOCI'], "Invalid database driver specified");
+
+        $host = $port = $name = $pass = $user = $driver = $log_queries = '';
+        extract($connection_config);
+
+        switch ($driver)
+        {
+            case 'PDOMYSQL':
+
+                $pdo = new \PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8", $user, $pass);
+                $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+                $pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
+                $pdo->exec("SET NAMES utf8 COLLATE utf8_unicode_ci");
+                return $pdo;
+
+            case 'PDOOCI':
+
+                $pdo = new \PDOOCI\PDO("{$name};charset=utf8", $user, $pass);
+                $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+                return $pdo;
+        }
+        return null;
+    }
+
+
+    /**
+     * @param array $settings
+     *
+     * @throws \Exception
+     */
+    public function __construct(array $settings=[])
+    {
+        $this->_read_only   = !empty($settings['dry_run']) ? boolval($settings['dry_run']) : false;
+        $this->_verbose     = !empty($settings['verbose']) ? boolval($settings['verbose']) : false;
+        $primaryKeyName     = !empty($settings['private_key']) ? $settings['private_key'] : 'id';
+        $foreignKeyName     = !empty($settings['foreign_key']) ? $settings['foreign_key'] : '%s_id';
+        $this->_pdo          = static::getPdoConnection($this->_connection);
         $this->setStructure($primaryKeyName, $foreignKeyName);
+    }
+
+    public function beginTrans()
+    {
+        $this->_pdo->beginTransaction();
+        return $this;
+    }
+
+    public function commitTrans()
+    {
+        $this->_pdo->commit();
+        return $this;
+    }
+
+    public function rollbackTrans()
+    {
+        $this->_pdo->rollBack();
+        return $this;
+    }
+
+    public function getCachedField($sField, $aConditions, $sCacheConfig='lookup_values')
+    {
+        $sCacheKey = md5(json_encode([
+            'table'     => $this->_table_name,
+            'field'     => $sField,
+            'where'     => $aConditions,
+            'type'      => __FUNCTION__,
+        ]));
+        return Utilities\Cache\Cache::remember($sCacheKey, function() use ($sField, $aConditions) {
+
+            return $this->where($aConditions)->toField($sField);
+
+        }, $sCacheConfig);
+    }
+
+    public function getCachedObject($aFields, $aConditions, $sCacheConfig='lookup_values')
+    {
+        $sCacheKey = md5(json_encode([
+            'table'     => $this->_table_name,
+            'fields'    => $aFields,
+            'where'     => $aConditions,
+            'type'      => __FUNCTION__,
+        ]));
+        return Utilities\Cache\Cache::remember($sCacheKey, function() use ($aFields, $aConditions) {
+
+            return $this->select($aFields)->where($aConditions)->toObject();
+
+        }, $sCacheConfig);
+    }
+
+    public function getCachedObjects($aFields, $aConditions, $sCacheConfig='lookup_values')
+    {
+        $sCacheKey = md5(json_encode([
+            'table'     => $this->_table_name,
+            'fields'    => $aFields,
+            'where'     => $aConditions,
+            'type'      => __FUNCTION__,
+        ]));
+        return Utilities\Cache\Cache::remember($sCacheKey, function() use ($aFields, $aConditions) {
+
+            return $this->select($aFields)->where($aConditions)->toObjects();
+
+        }, $sCacheConfig);
+    }
+
+    public function getCachedList($sKeyedOn, $sShowVal, $aConditions, $sCacheConfig='lookup_values')
+    {
+        $sCacheKey = md5(json_encode([
+            'table'     => $this->_table_name,
+            'fields'    => [$sKeyedOn, $sShowVal],
+            'where'     => $aConditions,
+            'type'      => __FUNCTION__,
+        ]));
+        return Utilities\Cache\Cache::remember($sCacheKey, function() use ($sKeyedOn, $sShowVal, $aConditions) {
+
+            return $this->select([$sKeyedOn, $sShowVal])->where($aConditions)->toList($sKeyedOn, $sShowVal);
+
+        }, $sCacheConfig);
     }
 
     /**
@@ -104,11 +309,11 @@ class FluentModel
      * @param  string   $alias     - The table alias name
      * @return FluentModel
      */
-    public function table($tableName, $alias = "")
+    public function table($tableName, $alias = '')
     {
         $instance = clone($this);
-        $instance->table_name = $tableName;
-        $instance->table_token = $tableName;
+        $instance->_table_name = $tableName;
+        $instance->_table_token = $tableName;
         $instance->setTableAlias($alias);
         $instance->reset();
         return $instance;
@@ -120,7 +325,51 @@ class FluentModel
      */
     public function getTablename()
     {
-        return $this->table_name;
+        return $this->_table_name;
+    }
+
+    public function displayColumn()
+    {
+        return $this->_display_column;
+    }
+
+    public function errors()
+    {
+        return $this->_errors;
+    }
+
+    public function getValidationRules()
+    {
+        return $this->_rules;
+    }
+
+    public function validate(array $record, $sType='insert')
+    {
+        $this->_errors = [];
+        foreach ( $this->getValidationRules() as $column => $rules )
+        {
+            if ( !isset($record[$column]) )
+            {
+                // @todo: What to do about missing columns?
+                continue;
+            }
+            foreach ( $rules as $rule_name => $validator )
+            {
+                if ( $sType === 'insert' && $column === 'id' && $rule_name === 'not_empty' )
+                {
+                    continue;
+                }
+                $validator = is_callable($validator) ? $validator : function($field_val) use ($validator) {
+
+                    return !preg_match($validator, $field_val);
+                };
+                if ( ! $validator($record[$column]) )
+                {
+                    $this->_errors[$column][] = $rule_name;
+                }
+            }
+        }
+        return empty($this->_errors) ? true : false;
     }
 
     /**
@@ -131,13 +380,13 @@ class FluentModel
      */
     public function setTableAlias($alias)
     {
-        $this->table_alias = $alias;
+        $this->_table_alias = $alias;
         return $this;
     }
 
     public function getTableAlias()
     {
-        return $this->table_alias;
+        return $this->_table_alias;
     }
 
     /**
@@ -147,13 +396,24 @@ class FluentModel
      *                                  where %s will be substituted with the table name
      * @return FluentModel
      */
-    public function setStructure($primaryKeyName = "id", $foreignKeyName = "%s_id")
+    public function setStructure($primaryKeyName = 'id', $foreignKeyName = '%s_id')
     {
         $this->table_structure = [
-            "primaryKeyname" => $primaryKeyName,
-            "foreignKeyname" => $foreignKeyName
+            'primaryKeyname' => $primaryKeyName,
+            'foreignKeyname' => $foreignKeyName
         ];
         return $this;
+    }
+
+    public function arrayToList($aList, $bQuote=true)
+    {
+        if ( $bQuote )
+        {
+            array_map(function($mElem){
+                return "'{$mElem}'";
+            }, $aList);
+        }
+        return implode(',', $aList);
     }
 
     /**
@@ -171,7 +431,7 @@ class FluentModel
      */
     public function getPrimaryKeyname()
     {
-        return $this->formatKeyname($this->table_structure["primaryKeyname"], $this->table_name);
+        return $this->formatKeyname($this->table_structure['primaryKeyname'], $this->_table_name);
     }
 
     /**
@@ -180,7 +440,7 @@ class FluentModel
      */
     public function getForeignKeyname()
     {
-        return $this->formatKeyname($this->table_structure["foreignKeyname"], $this->table_name);
+        return $this->formatKeyname($this->table_structure['foreignKeyname'], $this->_table_name);
     }
 
     /**
@@ -190,35 +450,124 @@ class FluentModel
      */
     public function isSingleRow()
     {
-        return $this->is_single;
+        return $this->_is_single;
     }
 
 /*******************************************************************************/
+
+
     /**
      * To execute a raw query
      *
-     * @param string    $query
-     * @param Array     $parameters
-     * @param bool      $return_as_pdo_stmt - true, it will return the PDOStatement
-     *                                       false, it will return $this, which can be used for chaining
-     *                                              or access the properties of the results
-     * @return FluentModel | \PDOStatement
+     * @param string $query
+     * @param array $parameters
+     * @param bool  $return_as_pdo_stmt
+     * @param Closure $callback_fn
+     *
+     * @return $this|int|\PDOStatement
+     * @throws \Exception
      */
-    public function query($query, Array $parameters = [], $return_as_pdo_stmt = false)
+    public function query($query, array $parameters=[], $return_as_pdo_stmt=false, Closure $callback_fn=null)
     {
-        $this->sql_parameters = $parameters;
-        $this->sql_query = $query;
+        $this->_sql_parameters = $parameters;
+        $this->_sql_query = $query;
 
-        if ($this->debug_sql_query) {
+        if ($this->_debug_sql_query)
+        {
             return $this;
         }
-        $this->pdo_stmt = $this->pdo->prepare($query);
-        $this->pdo_executed = $this->pdo_stmt->execute($parameters);
-        if ($return_as_pdo_stmt) {
-            return $this->pdo_stmt;
+        $sBuiltQuery = '';
+        if ( $this->_pdo->log_queries )
+        {
+            $sBuiltQuery = $this->buildQuery($query, $parameters);
+            Utilities\Logger::db_all($sBuiltQuery);
         }
-        $this->is_fluent_query = true;
+        try{
+            $secs_taken             = microtime(true);
+            $this->_pdo_stmt = $this->_pdo->prepare($query);
+            $this->_pdo_executed = $this->_pdo_stmt->execute($parameters);
+            $secs_taken             = microtime(true)  - $secs_taken;
+            if ( $this->_pdo->log_queries && $secs_taken > 5 )
+            {
+                $secs_taken = Utilities\StringUtils::secondsToWords(microtime(true)  - $secs_taken);
+                Utilities\Logger::db_all("SLOW QUERY - {$secs_taken}:\n{$sBuiltQuery}");
+            }
+        }
+        catch(\Exception $e)
+        {
+            Utilities\Logger::db_all("FAILED: " . $this->buildQuery($query, $parameters) . "\n WITH ERROR:\n" . $e->getMessage());
+            throw $e;
+        }
+        if ( is_callable($callback_fn) )
+        {
+            $success_cnt   = 0;
+            $this->_pdo_stmt->setFetchMode(\PDO::FETCH_ASSOC);
+            while ( $oData = static::_fetchAndFormat($this->_pdo_stmt) )
+            {
+                if ( $callback_fn($oData) )
+                {
+                    $success_cnt++;
+                }
+            }
+            return $success_cnt;
+        }
+        if ( $return_as_pdo_stmt )
+        {
+            return $this->_pdo_stmt;
+        }
+        $this->_is_fluent_query = true;
         return $this;
+    }
+
+    public function buildQuery($sql, array $params=[])
+    {
+        $indexed = $params == array_values($params);
+        foreach ( $params as $k => $v )
+        {
+            if ( is_string($v) )
+            {
+                $v = "'{$v}'";
+            }
+            if ( $indexed )
+            {
+                $sql = preg_replace('/\?/', $v, $sql, 1);
+            }
+            else
+            {
+                $sql = str_replace(":$k", $v, $sql);
+                $sql = str_replace("$k", $v, $sql);
+            }
+        }
+        return $sql;
+    }
+
+    /**
+     * Execute a sql query
+     *
+     * @param $sql
+     *
+     * @return int
+     */
+    public function execute($sql) {
+
+        return $this->_pdo->exec($sql);
+    }
+
+    /**
+     * @param     \PDOStatement $pdo_stmt
+     * @param bool $as_array
+     *
+     * @return array|bool|object
+     */
+    static public function _fetchAndFormat(\PDOStatement $pdo_stmt, $as_array=false)
+    {
+        $data = $pdo_stmt->fetch();
+        if ( ! $data )
+        {
+            return false;
+        }
+        $data = Utilities\ArrayUtils::trim(array_change_key_case($data, CASE_LOWER));
+        return $as_array ? $data : (object)$data;
     }
 
     /**
@@ -228,13 +577,9 @@ class FluentModel
      */
     public function rowCount()
     {
-        return ($this->pdo_executed == true) ? $this->pdo_stmt->rowCount() : 0;
+        return ($this->_pdo_executed == true) ? $this->_pdo_stmt->rowCount() : 0;
     }
 
-
-/*------------------------------------------------------------------------------
-                                Querying
-*-----------------------------------------------------------------------------*/
     /**
      * To find all rows and create their instances
      * Use the query builder to build the where clause or $this->query with select
@@ -244,63 +589,168 @@ class FluentModel
      *   // do more stuff here...
      * });
      *
-     * @param  Closure        $callback - run a function on the returned rows
+     * @param Closure $callback - run a function on the returned rows
+     * @param bool     $bAsStmt
+     * @param bool     $bAddSuccessCount
+     *
      * @return array|\PDOStatement
+     * @throws \Exception
      */
-    public function find(Closure $callback = null)
+    public function find(Closure $callback = null, $bAsStmt=false, $bAddSuccessCount=false)
     {
-        if($this->is_fluent_query && $this->pdo_stmt == null){
+        if ( $this->_is_fluent_query && $this->_pdo_stmt == null )
+        {
             $this->query($this->getSelectQuery(), $this->getWhereParameters());
         }
-
         //Debug SQL Query
-        if ($this->debug_sql_query) {
+        if ($this->_debug_sql_query)
+        {
             $this->debugSqlQuery(false);
             return false;
         }
-        if ($this->pdo_executed != true) {
+        if ( $this->_pdo_executed != true )
+        {
             return false;
         }
-
-        $allRows = $this->pdo_stmt->fetchAll(PDO::FETCH_ASSOC);
+        if ( $bAddSuccessCount && is_callable($callback) )
+        {
+            $success_cnt   = 0;
+            $this->_pdo_stmt->setFetchMode(\PDO::FETCH_ASSOC);
+            while ( $oData = static::_fetchAndFormat($this->_pdo_stmt) )
+            {
+                if ( $callback($oData) )
+                {
+                    $success_cnt++;
+                }
+            }
+            return $success_cnt;
+        }
+        if ( $bAsStmt )
+        {
+            if ( is_callable($callback) )
+            {
+                return $callback($this->_pdo_stmt);
+            }
+            return $this->_pdo_stmt;
+        }
+        $allRows = $this->_pdo_stmt->fetchAll(PDO::FETCH_ASSOC);
         $this->reset();
 
-        if (is_callable($callback)) {
+        if ( is_callable($callback) )
+        {
             return $callback($allRows);
         }
 
-        if(!count($allRows)) {
+        if( !count($allRows) )
+        {
             return [];
         }
 
-        // Holding all foreign keys matching the structure
-        $matchForeignKey = function($key) {
-            return preg_match("/".str_replace("%s","[a-z]", $this->table_structure["foreignKeyname"])."/i", $key);
-        };
-        foreach ($allRows as $index => &$row) {
-            if ($index == 0) {
-                $this->reference_keys = [$this->table_structure["primaryKeyname"] => []];
-                foreach(array_keys($row) as $_rowK) {
-                    if ($matchForeignKey($_rowK)) {
-                        $this->reference_keys[$_rowK] = [];
-                    }
-                }
-            }
-            foreach($row as $rowK => &$rowV) {
-                if(array_key_exists($rowK, $this->reference_keys)) {
-                    $this->reference_keys[$rowK][] = $rowV;
-                    $this->reference_keys[$rowK] = array_unique($this->reference_keys[$rowK]);
-                }
-            }
-        }
-        unset($row);
+//        // Holding all foreign keys matching the structure
+//        $matchForeignKey = function($key)
+//        {
+//            return preg_match("/".str_replace("%s","[a-z]", $this->table_structure["foreignKeyname"])."/i", $key);
+//        };
+//        foreach ( $allRows as $index => &$row )
+//        {
+//            if ( $index == 0 )
+//            {
+//                $this->_reference_keys = [$this->table_structure["primaryKeyname"] => []];
+//                foreach( array_keys($row) as $_rowK )
+//                {
+//                    if ( $matchForeignKey($_rowK) )
+//                    {
+//                        $this->_reference_keys[$_rowK] = [];
+//                    }
+//                }
+//            }
+//            foreach( $row as $rowK => &$rowV )
+//            {
+//                if( array_key_exists($rowK, $this->_reference_keys) )
+//                {
+//                    $this->_reference_keys[$rowK][] = $rowV;
+//                    $this->_reference_keys[$rowK] = array_unique($this->_reference_keys[$rowK]);
+//                }
+//            }
+//        }
+//        unset($row);
         $rowsObject = [];
-        foreach ($allRows as $row) {
+        foreach ($allRows as $row)
+        {
             $rowsObject[] = $this->fromArray($row);
         }
         return $rowsObject;
     }
 
+    /**
+     * @param string $sKeyedOn
+     * @param string $sShowField
+     *
+     * @return array
+     */
+    public function toList($sKeyedOn=null, $sShowField=null)
+    {
+        return $this->find(function(\PDOStatement $oStmt) use ($sKeyedOn, $sShowField) {
+
+            $aResult = [];
+            $oStmt->setFetchMode(\PDO::FETCH_ASSOC);
+            while ( $aData = static::_fetchAndFormat($oStmt, true) )
+            {
+                if ( is_null($sKeyedOn) )
+                {
+                    $aKeys      = array_keys($aData);
+                    $sKeyedOn   = $aKeys[0];
+                    $sShowField = isset($aKeys[1]) ? $aKeys[1] : null;
+                }
+                $aResult[$aData[$sKeyedOn]] = !is_null($sShowField) ? $aData[$sShowField] : $aData;
+            }
+            return $aResult;
+
+        }, true);
+    }
+
+    public function toAssoc($sKeyedOn=null)
+    {
+        return $this->toResults(true, $sKeyedOn);
+    }
+
+    public function toObjects($sKeyedOn=null)
+    {
+        return $this->toResults(false, $sKeyedOn);
+    }
+
+    public function toResults($bAsAssoc=true, $sKeyedOn=null)
+    {
+        return $this->find(function(\PDOStatement $oStmt) use ($bAsAssoc, $sKeyedOn) {
+
+            $aResult = [];
+            $oStmt->setFetchMode(\PDO::FETCH_ASSOC);
+            while ( $aData = static::_fetchAndFormat($oStmt, true) )
+            {
+                $sKeyedOn = is_null($sKeyedOn) ? 'id' : $sKeyedOn;
+                $sKeyedOn = isset($aData[$sKeyedOn]) ? $sKeyedOn : null;
+                if ( is_null($sKeyedOn) )
+                {
+                    $aKeys      = array_keys($aData);
+                    $sKeyedOn   = $aKeys[0];
+                }
+                $aResult[$aData[$sKeyedOn]] = $bAsAssoc ? $aData : (object)$aData;
+            }
+            return $aResult;
+
+        }, true);
+    }
+
+    public function toField($sField='id', $iItemId=null)
+    {
+        $aResult = $this->findOne($iItemId);
+        if ( !$aResult )
+        {
+            return null;
+        }
+        $aResult = $aResult->toArray();
+        return isset($aResult[$sField]) ? $aResult[$sField] : null;
+    }
     /**
      * Return one row
      *
@@ -309,17 +759,19 @@ class FluentModel
      */
     public function findOne($id = null)
     {
-        if ($id){
-            $this->wherePK($id);
+        if ( $id )
+        {
+            $this->wherePK($id, true);
         }
         $this->limit(1);
         // Debug the SQL Query
-        if ($this->debug_sql_query) {
+        if ( $this->_debug_sql_query )
+        {
             $this->find();
             return false;
         }
         $findAll = $this->find();
-        return $findAll->valid() ? $findAll->offsetGet(0) : false;
+        return $findAll ? array_shift($findAll) : false;
     }
 
     /**
@@ -334,7 +786,7 @@ class FluentModel
     {
         $row  = clone($this);
         $row->reset();
-        $row->is_single = true;
+        $row->_is_single = true;
         $row->_data = $data;
         return $row;
     }
@@ -350,15 +802,56 @@ class FluentModel
      * @param  string   $alias - an alias to the column
      * @return FluentModel
      */
-    public function select($columns = "*", $alias = null)
+    public function select($columns = '*', $alias = null)
     {
-        $this->is_fluent_query = true;
+        $this->_is_fluent_query = true;
 
         if ( $alias && !is_array($columns) )
         {
             $columns .= " AS {$alias} ";
         }
-        $this->select_fields = is_array($columns) ? array_merge($this->select_fields, $columns) : $columns;
+        if ( $columns === '*' && !empty($this->_columns) )
+        {
+            $columns = array_keys($this->_columns);
+        }
+        $this->_select_fields = is_array($columns) ? array_merge($this->_select_fields, $columns) : $columns;
+        return $this;
+    }
+
+    public function distinct($bDistinct=true)
+    {
+        $this->_distinct = $bDistinct;
+        return $this;
+    }
+
+    public function addSelect($columns)
+    {
+        if ( empty($this->_select_fields) )
+        {
+            $this->select('*');
+        }
+        if ( is_array($columns) )
+        {
+            $this->_select_fields = array_merge($this->_select_fields, $columns);
+        }
+        else
+        {
+            $this->_select_fields[] = $columns;
+        }
+    }
+
+    public function withBelongsTo($withBelongsTo=true)
+    {
+        if ( $withBelongsTo && !empty($this->_auto_joins['belongsTo']) )
+        {
+            foreach ( $this->_auto_joins['belongsTo'] as $sAlias => $aConfig )
+            {
+                list($sTable, $sJoinCol, $sField) = $aConfig;
+                $sCondition = "{$sAlias}.id = {$this->_table_alias}.{$sJoinCol}";
+                $this->leftJoin($sTable, $sCondition, $sAlias);
+                $this->addSelect($sField);
+            }
+        }
         return $this;
     }
 
@@ -372,10 +865,10 @@ class FluentModel
      */
     public function where($condition, $parameters = [])
     {
-        $this->is_fluent_query = true;
+        $this->_is_fluent_query = true;
 
         // By default the and_or_operator and wrap operator is AND,
-        if ( $this->wrap_open || ! $this->and_or_operator )
+        if ( $this->_wrap_open || ! $this->_and_or_operator )
         {
             $this->_and();
         }
@@ -391,29 +884,29 @@ class FluentModel
         }
 
         $args = func_num_args();
-        if ( $args != 2 || strpbrk($condition, "?:") )
-        { // where("column < ? OR column > ?", array(1, 2))
+        if ( $args != 2 || strpbrk($condition, '?:') )
+        { // where('column < ? OR column > ?', array(1, 2))
             if ( $args != 2 || !is_array($parameters) )
-            { // where("column < ? OR column > ?", 1, 2)
+            { // where('column < ? OR column > ?', 1, 2)
                 $parameters = func_get_args();
                 array_shift($parameters);
             }
         }
         else if ( !is_array($parameters) )
         {//where(column,value) => column=value
-            $condition .= " = ?";
+            $condition .= ' = ?';
             $parameters = [$parameters];
         }
         else if ( is_array($parameters) )
-        { // where("column", array(1, 2)) => column IN (?,?)
+        { // where('column', array(1, 2)) => column IN (?,?)
             $placeholders = $this->makePlaceholders(count($parameters));
             $condition = "({$condition} IN ({$placeholders}))";
         }
 
-        $this->where_conditions[] = [
-            "STATEMENT"   => $condition,
-            "PARAMS"      => $parameters,
-            "OPERATOR"    => $this->and_or_operator
+        $this->_where_conditions[] = [
+            'STATEMENT'   => $condition,
+            'PARAMS'      => $parameters,
+            'OPERATOR'    => $this->_and_or_operator
         ];
         // Reset the where operator to AND. To use OR, you must call _or()
         $this->_and();
@@ -427,13 +920,14 @@ class FluentModel
      */
     public function _and()
     {
-        if ($this->wrap_open) {
-            $this->where_conditions[] = self::OPERATOR_AND;
-            $this->last_wrap_position = count($this->where_conditions);
-            $this->wrap_open = false;
-        } else {
-            $this->and_or_operator = self::OPERATOR_AND;
+        if ( $this->_wrap_open )
+        {
+            $this->_where_conditions[] = self::OPERATOR_AND;
+            $this->_last_wrap_position = count($this->_where_conditions);
+            $this->_wrap_open = false;
+            return $this;
         }
+        $this->_and_or_operator = self::OPERATOR_AND;
         return $this;
     }
 
@@ -445,13 +939,14 @@ class FluentModel
      */
     public function _or()
     {
-        if ($this->wrap_open) {
-            $this->where_conditions[] = self::OPERATOR_OR;
-            $this->last_wrap_position = count($this->where_conditions);
-            $this->wrap_open = false;
-        } else {
-            $this->and_or_operator = self::OPERATOR_OR;
+        if ( $this->_wrap_open )
+        {
+            $this->_where_conditions[] = self::OPERATOR_OR;
+            $this->_last_wrap_position = count($this->_where_conditions);
+            $this->_wrap_open = false;
+            return $this;
         }
+        $this->_and_or_operator = self::OPERATOR_OR;
         return $this;
     }
 
@@ -462,26 +957,26 @@ class FluentModel
      */
     public function wrap()
     {
-        $this->wrap_open = true;
-
-        $spliced = array_splice($this->where_conditions, $this->last_wrap_position, count($this->where_conditions), "(");
-        $this->where_conditions = array_merge($this->where_conditions, $spliced);
-
-        array_push($this->where_conditions,")");
-        $this->last_wrap_position = count($this->where_conditions);
-
+        $this->_wrap_open = true;
+        $spliced = array_splice($this->_where_conditions, $this->_last_wrap_position, count($this->_where_conditions), '(');
+        $this->_where_conditions = array_merge($this->_where_conditions, $spliced);
+        array_push($this->_where_conditions,')');
+        $this->_last_wrap_position = count($this->_where_conditions);
         return $this;
     }
 
     /**
      * Where Primary key
      *
-     * @param  int  $id
+     * @param      $id
+     * @param bool $addAlias
+     *
      * @return FluentModel
      */
-    public function wherePK($id)
+    public function wherePK($id, $addAlias=false)
     {
-        return $this->where($this->getPrimaryKeyname(), $id);
+        $alias = $addAlias ? "{$this->_table_alias}." : '';
+        return $this->where($alias . $this->getPrimaryKeyname(), $id);
     }
 
     /**
@@ -619,10 +1114,10 @@ class FluentModel
 
     public function having($statement, $operator = self::OPERATOR_AND)
     {
-        $this->is_fluent_query = true;
-        $this->having[] = [
-            "STATEMENT"   => $statement,
-            "OPERATOR"    => $operator
+        $this->_is_fluent_query = true;
+        $this->_having[] = [
+            'STATEMENT'   => $statement,
+            'OPERATOR'    => $operator
         ];
         return $this;
     }
@@ -634,10 +1129,10 @@ class FluentModel
      * @param  string   $ordering   (DESC | ASC)
      * @return FluentModel
      */
-    public function orderBy($columnName, $ordering = "")
+    public function orderBy($columnName, $ordering = '')
     {
-        $this->is_fluent_query = true;
-        $this->order_by[] = "{$columnName} {$ordering}";
+        $this->_is_fluent_query = true;
+        $this->_order_by[] = "{$columnName} {$ordering}";
         return $this;
     }
 
@@ -649,8 +1144,8 @@ class FluentModel
      */
     public function groupBy($columnName)
     {
-        $this->is_fluent_query = true;
-        $this->group_by[] = $columnName;
+        $this->_is_fluent_query = true;
+        $this->_group_by[] = $columnName;
         return $this;
     }
 
@@ -664,8 +1159,8 @@ class FluentModel
      */
     public function limit($limit, $offset = null)
     {
-        $this->is_fluent_query = true;
-        $this->limit = $limit;
+        $this->_is_fluent_query = true;
+        $this->_limit = $limit;
 
         if($offset){
             $this->offset($offset);
@@ -681,7 +1176,7 @@ class FluentModel
      */
     public function getLimit()
     {
-        return $this->limit;
+        return $this->_limit;
     }
 
     /**
@@ -692,8 +1187,8 @@ class FluentModel
      */
     public function offset($offset)
     {
-        $this->is_fluent_query = true;
-        $this->offset = $offset;
+        $this->_is_fluent_query = true;
+        $this->_offset = $offset;
         return $this;
     }
 
@@ -704,7 +1199,7 @@ class FluentModel
      */
     public function getOffset()
     {
-        return $this->offset;
+        return $this->_offset;
     }
 
 
@@ -717,18 +1212,20 @@ class FluentModel
      * @param  string   $join_operator - LEFT | INNER | etc...
      * @return FluentModel
      */
-    public function join($table, $constraint, $table_alias = "", $join_operator = "")
+    public function join($table, $constraint, $table_alias = null, $join_operator = '')
     {
-        $this->is_fluent_query = true;
+        $this->_is_fluent_query = true;
 
-        if($table instanceof VoodOrm){
-            $table = $table->table_name;
+        if( $table instanceof FluentModel )
+        {
+            $table = $table->getTablename();
         }
-        $join  = $join_operator ? "{$join_operator} " : "";
+        $join  = $join_operator ? "{$join_operator} " : '';
         $join .= "JOIN {$table} ";
-        $join .= $table_alias ? "AS {$table_alias} " : "";
+        $table_alias = is_null($table_alias) ? Utilities\Inflector::classify($table) : $table_alias;
+        $join .= $table_alias ? "AS {$table_alias} " : '';
         $join .= "ON {$constraint}";
-        $this->join_sources[] = $join;
+        $this->_join_sources[] = $join;
         return $this;
     }
 
@@ -742,40 +1239,54 @@ class FluentModel
      */
     public function leftJoin($table, $constraint, $table_alias=null)
     {
-        return $this->join($table, $constraint, $table_alias,"LEFT");
+        return $this->join($table, $constraint, $table_alias,'LEFT');
     }
 
 
     /**
-     * Return the buit select query
+     * Return the build select query
      *
      * @return string
      */
     public function getSelectQuery()
     {
-        if (!count($this->select_fields)) {
-            $this->select("*");
+        if ( !count($this->_select_fields) )
+        {
+            $this->select('*');
         }
-
-        $query  = "SELECT ";
-        $query .= implode(", ", $this->prepareColumns($this->select_fields));
-        $query .= " FROM {$this->table_name}".($this->table_alias ? " AS {$this->table_alias}" : "");
-        if(count($this->join_sources)){
-            $query .= (" ").implode(" ",$this->join_sources);
+        foreach ( $this->_select_fields as $idx => $sCols )
+        {
+            if (  Utilities\StringUtils::startsWith('distinct ', trim(strtolower($sCols))) )
+            {
+                $this->_distinct = true;
+                $this->_select_fields[$idx] = str_ireplace('distinct ', '', $sCols);
+            }
+        }
+        $query  = 'SELECT ';
+        $query .= $this->_distinct ? 'DISTINCT ' : '';
+        $query .= implode(', ', $this->prepareColumns($this->_select_fields));
+        $query .= " FROM {$this->_table_name}".($this->_table_alias ? " AS {$this->_table_alias}" : '');
+        if ( count($this->_join_sources ) )
+        {
+            $query .= (' ').implode(' ',$this->_join_sources);
         }
         $query .= $this->getWhereString(); // WHERE
-        if (count($this->group_by)){
-            $query .= " GROUP BY " . implode(", ", array_unique($this->group_by));
+        if ( count($this->_group_by) )
+        {
+            $query .= ' GROUP BY ' . implode(', ', array_unique($this->_group_by));
         }
-        if (count($this->order_by)){
-            $query .= " ORDER BY " . implode(", ", array_unique($this->order_by));
+        if ( count($this->_order_by ) )
+        {
+            $query .= ' ORDER BY ' . implode(', ', array_unique($this->_order_by));
         }
         $query .= $this->getHavingString(); // HAVING
-        if ($this->limit){
-            $query .= " LIMIT " . $this->limit;
+        if ( $this->_limit )
+        {
+            $query .= ' LIMIT ' . $this->_limit;
         }
-        if ($this->offset){
-            $query .= " OFFSET " . $this->offset;
+        if ( $this->_offset )
+        {
+            $query .= ' OFFSET ' . $this->_offset;
         }
         return $query;
     }
@@ -785,23 +1296,26 @@ class FluentModel
      * @param array $columns
      * @return array
      */
-    private function prepareColumns(Array $columns){
-        if (! $this->table_alias) {
+    private function prepareColumns(Array $columns)
+    {
+        if ( ! $this->_table_alias )
+        {
             return $columns;
         }
-
         $newColumns = [];
-        foreach ($columns as $column) {
-            if (strpos($column, ",")) {
-                $newColumns = array_merge($this->prepareColumns(explode(",", $column)), $newColumns);
-            } else if (strpos($column, ".") == false && strpos(strtoupper($column), "NULL") == false) {
-                $column = trim($column);
-                if (preg_match("/^[0-9]/", $column)) {
-                    $newColumns[] = trim($column);
-                } else {
-                    $newColumns[] = $this->table_alias.".{$column}";
-                }
-            } else {
+        foreach ($columns as $column)
+        {
+            if ( strpos($column, ',') )
+            {
+                $newColumns = array_merge($this->prepareColumns(explode(',', $column)), $newColumns);
+            }
+            else if (strpos($column, '.') == false && strpos(strtoupper($column), 'NULL') == false)
+            {
+                $column         = trim($column);
+                $newColumns[]   = preg_match('/^[0-9]/', $column) ? trim($column) : "{$this->_table_alias}.{$column}";
+            }
+            else
+            {
                 $newColumns[] = trim($column);
             }
         }
@@ -816,26 +1330,31 @@ class FluentModel
     protected function getWhereString()
     {
         // If there are no WHERE clauses, return empty string
-        if (!count($this->where_conditions)) {
-            return " WHERE 1";
+        if ( ! count($this->_where_conditions) )
+        {
+            return ' WHERE 1';
         }
 
-        $where_condition = "";
-        $last_condition = "";
+        $where_condition = '';
+        $last_condition = '';
 
-        foreach ($this->where_conditions as $condition) {
-            if (is_array($condition)) {
-                if ($where_condition && $last_condition != "(" && !preg_match("/\)\s+(OR|AND)\s+$/i", $where_condition)) {
-                    $where_condition .= $condition["OPERATOR"];
+        foreach ( $this->_where_conditions as $condition )
+        {
+            if ( is_array($condition) )
+            {
+                if ($where_condition && $last_condition != '(' && !preg_match('/\)\s+(OR|AND)\s+$/i', $where_condition))
+                {
+                    $where_condition .= $condition['OPERATOR'];
                 }
-                $where_condition .= $condition["STATEMENT"];
-                $this->where_parameters = array_merge($this->where_parameters, $condition["PARAMS"]);
-            } else {
+                $where_condition .= $condition['STATEMENT'];
+                $this->_where_parameters = array_merge($this->_where_parameters, $condition['PARAMS']);
+            }
+            else
+            {
                 $where_condition .= $condition;
             }
             $last_condition = $condition;
         }
-
         return " WHERE {$where_condition}" ;
     }
 
@@ -847,19 +1366,25 @@ class FluentModel
     protected function getHavingString()
     {
         // If there are no WHERE clauses, return empty string
-        if (!count($this->having)) {
-            return "";
+        if ( ! count($this->_having) )
+        {
+            return '';
         }
 
-        $having_condition = "";
+        $having_condition = '';
 
-        foreach ($this->having as $condition) {
-            if (is_array($condition)) {
-                if ($having_condition && !preg_match("/\)\s+(OR|AND)\s+$/i", $having_condition)) {
-                    $having_condition .= $condition["OPERATOR"];
+        foreach ( $this->_having as $condition )
+        {
+            if ( is_array($condition) )
+            {
+                if ( $having_condition && !preg_match('/\)\s+(OR|AND)\s+$/i', $having_condition) )
+                {
+                    $having_condition .= $condition['OPERATOR'];
                 }
-                $having_condition .= $condition["STATEMENT"];
-            } else {
+                $having_condition .= $condition['STATEMENT'];
+            }
+            else
+            {
                 $having_condition .= $condition;
             }
         }
@@ -873,7 +1398,7 @@ class FluentModel
      */
     protected function getWhereParameters()
     {
-        return $this->where_parameters;
+        return $this->_where_parameters;
     }
 
     /**
@@ -883,7 +1408,8 @@ class FluentModel
       */
     protected function setSingleWhere()
     {
-        if ($this->is_single) {
+        if ( $this->_is_single )
+        {
             $this->resetWhere();
             $this->wherePK($this->getPK());
         }
@@ -897,8 +1423,8 @@ class FluentModel
       */
     protected function resetWhere()
     {
-        $this->where_conditions = [];
-        $this->where_parameters = [];
+        $this->_where_conditions = [];
+        $this->_where_parameters = [];
         return $this;
     }
 
@@ -914,47 +1440,118 @@ class FluentModel
      * @param  array    $data - data to populate
      * @return FluentModel
      */
-    public function insert(Array $data)
+    public function insert($data)
     {
-        $insert_values = [];
+        $data           = !is_array($data) ? (array)$data : $data;
+        $insert_values  = [];
         $question_marks = [];
-
-        // check if the data is multi dimention for bulk insert
-        $multi = $this->isArrayMultiDim($data);
-
-        $datafield = array_keys( $multi ? $data[0] : $data);
-
-        if ($multi) {
-            foreach ($data as $d) {
-                $question_marks[] = '('  . $this->makePlaceholders(count($d)) . ')';
-                $insert_values = array_merge($insert_values, array_values($d));
-            }
-        } else {
-            $question_marks[] = '('  . $this->makePlaceholders(count($data)) . ')';
-            $insert_values = array_values($data);
+        // check if the data is multi dimension for bulk insert
+        $multi          = $this->isArrayMultiDim($data);
+        $datafield      = array_keys($multi ? $data[0] : $data);
+        $data           = $multi ? $data : [$data];
+        foreach ( $data as $d )
+        {
+            $d                  = $this->beforeSave($d, static::SAVE_INSERT);
+            $datafield          = array_keys($d);
+            $question_marks[]   = '('  . $this->makePlaceholders(count($d)) . ')';
+            $insert_values      = array_merge($insert_values, array_values($d));
         }
-
-        $sql = "INSERT INTO {$this->table_name} (" . implode(",", $datafield ) . ") ";
-        $sql .= "VALUES " . implode(',', $question_marks);
-
-        $this->query($sql,$insert_values);
-
+        $data           = $multi ? $data : $data[0];
+        $sql = "INSERT INTO {$this->_table_name} (" . implode(',', $datafield ) . ') ';
+        $sql .= 'VALUES ' . implode(',', $question_marks);
+        $this->query($sql, $insert_values);
         // Return the SQL Query
-        if ($this->debug_sql_query) {
+        if ($this->_debug_sql_query)
+        {
             $this->debugSqlQuery(false);
             return $this;
         }
-
         $rowCount = $this->rowCount();
-
         // On single element return the object
-        if ($rowCount == 1) {
-            $primaryKeyname = $this->getPrimaryKeyname();
-            $data[$primaryKeyname] = $this->pdo->lastInsertId($primaryKeyname);
+        if ( $rowCount === 1 )
+        {
+            $primaryKeyname         = $this->getPrimaryKeyname();
+            $data[$primaryKeyname]  = $this->_pdo->lastInsertId($primaryKeyname);
             return $this->fromArray($data);
         }
-
         return $rowCount;
+    }
+
+    /**
+     * @param array $data
+     * @param array $match_on
+     *
+     * @return Array|bool|int|null
+     */
+    public function upsert(array $data, array $match_on = null)
+    {
+        $data           = !is_array($data) ? (array)$data : $data;
+        $is_multi       = ( count($data) != count($data, COUNT_RECURSIVE) );
+        $data           = $is_multi ? $data : [$data];
+        $num_success    = 0;
+        $result         = null;
+        foreach ( $data as $row )
+        {
+            if ( ($result = $this->upsertOne($row, $match_on) ) )
+            {
+                $num_success++;
+            }
+        }
+        return $is_multi ? $num_success : $result;
+    }
+
+    public function upsertOne(array $data, $match_on=[])
+    {
+        $data           = is_array($data) ? $data : (array)$data;
+        $primary_key    = $this->getPrimaryKeyname();
+        $match_on       = empty($match_on) && isset($data[$primary_key]) ? [$primary_key] : $match_on;
+        foreach ( (array)$match_on as $column )
+        {
+            \Assert\that(! isset($data[$column]) && $column !== $primary_key)->false('The match on value for upserts is missing.');
+            if ( isset($data[$column]) )
+            {
+                $this->where($column, $data[$column]);
+            }
+        }
+        if ( count($this->_where_conditions) < 1 )
+        {
+            $result = $this->insert($data);
+            return $result ? $result->toArray() : false;
+        }
+        $oResult = $this->findOne();
+        if ( $oResult )
+        {
+            $oResult->update($data);
+            $this->_errors = $oResult->errors();
+            return $oResult->toArray();
+        }
+        $result = $this->insert($data);
+        return $result ? $result->toArray() : false;
+    }
+
+    public function beforeSave(array $data)
+    {
+        return $data;
+    }
+
+    /**
+     * @param array $data
+     *
+     * @return array
+     */
+    public function afterSave(array $data)
+    {
+        return $data;
+    }
+
+    /**
+     * @param array $data
+     *
+     * @return array
+     */
+    public function afterFind(array $data)
+    {
+        return $data;
     }
 
 /*------------------------------------------------------------------------------
@@ -967,39 +1564,43 @@ class FluentModel
       * @param Array $data the data to update
       * @return int - total affected rows
       */
-    public function update(Array $data = null)
+    public function update(array $data = null)
     {
+        $data = !is_array($data) ? (array)$data : $data;
         $this->setSingleWhere();
-
-        if (! is_null($data)) {
+        if ( ! is_null($data) )
+        {
             $this->set($data);
         }
-
-        // Make sure we remove the primary key
-        unset($this->_dirty_fields[$this->getPrimaryKeyname()]);
-
-        $values = array_values($this->_dirty_fields);
-        $field_list = [];
-
-        if (count($values) == 0){
+        if ( ! ( $this->_dirty_fields = $this->beforeSave($this->_dirty_fields) ) )
+        {
             return false;
         }
-
-        foreach (array_keys($this->_dirty_fields) as $key) {
+        if ( ! $this->validate($this->_dirty_fields, __FUNCTION__) )
+        {
+            return false;
+        }
+        // Make sure we remove the primary key
+        unset($this->_dirty_fields[$this->getPrimaryKeyname()]);
+        $values     = array_values($this->_dirty_fields);
+        $field_list = [];
+        if ( count($values) == 0 )
+        {
+            return false;
+        }
+        foreach ( array_keys($this->_dirty_fields) as $key )
+        {
             $field_list[] = "{$key} = ?";
         }
-
-        $query  = "UPDATE {$this->table_name} SET ";
-
-        $query .= implode(", ",$field_list);
+        $query  = "UPDATE {$this->_table_name} SET ";
+        $query .= implode(', ', $field_list);
         $query .= $this->getWhereString();
-
         $values = array_merge($values, $this->getWhereParameters());
-
         $this->query($query, $values);
-
+        $this->afterSave($data);
         // Return the SQL Query
-        if ($this->debug_sql_query) {
+        if ($this->_debug_sql_query)
+        {
             $this->debugSqlQuery(false);
             return $this;
         }
@@ -1019,26 +1620,36 @@ class FluentModel
     public function delete($deleteAll = false)
     {
         $this->setSingleWhere();
-
-        if (count($this->where_conditions)) {
-            $query  = "DELETE FROM {$this->table_name}";
+        $query  = "DELETE FROM {$this->_table_name}";
+        if ( count($this->_where_conditions) )
+        {
             $query .= $this->getWhereString();
             $this->query($query, $this->getWhereParameters());
-        } else {
-            if ($deleteAll) {
-                $query  = "DELETE FROM {$this->table_name}";
-                $this->query($query);
-            } else {
+        }
+        else
+        {
+            if ( ! $deleteAll )
+            {
                 return false;
             }
+            $this->query($query);
         }
-
         // Return the SQL Query
-        if ($this->debug_sql_query) {
+        if ( $this->_debug_sql_query )
+        {
             $this->debugSqlQuery(false);
             return $this;
         }
         return $this->rowCount();
+    }
+
+    /**
+     * Truncate the table
+     * @return int
+     */
+    public function truncate()
+    {
+        return $this->_pdo->exec("TRUNCATE TABLE {$this->_table_name}");
     }
 
 /*------------------------------------------------------------------------------
@@ -1054,15 +1665,18 @@ class FluentModel
      */
     public function set($key, $value = null)
     {
-        if(is_array($key)) {
-            foreach ($key as $keyKey => $keyValue) {
+        if ( is_array($key) )
+        {
+            foreach ( $key as $keyKey => $keyValue )
+            {
                 $this->set($keyKey, $keyValue);
             }
-        }  else {
-            if( $key != $this->getPrimaryKeyname()) {
-                $this->_data[$key] = $value;
-                $this->_dirty_fields[$key] = $value;
-            }
+            return $this;
+        }
+        if ( $key != $this->getPrimaryKeyname() )
+        {
+            $this->_data[$key]          = $value;
+            $this->_dirty_fields[$key]  = $value;
         }
         return $this;
     }
@@ -1074,7 +1688,8 @@ class FluentModel
      */
     public function save()
     {
-        if ($this->is_single || count($this->where_conditions)) {
+        if ( $this->_is_single || count($this->_where_conditions) )
+        {
             return $this->update();
         }
         return $this->insert($this->_dirty_fields);
@@ -1091,7 +1706,7 @@ class FluentModel
      * @param  string $column - the column name
      * @return double
      */
-    public function count($column="*")
+    public function count($column='*')
     {
         return $this->aggregate("COUNT({$column})");
     }
@@ -1186,17 +1801,31 @@ class FluentModel
     {
         return $this->_data;
     }
-    /*
-        public function __get($key)
-        {
-            return $this->get($y);
-        }
 
-        public function __set($key, $value)
+    public function toObject($iItemId=null)
+    {
+        if ( is_null($iItemId) && $this->_pdo_executed )
         {
-            $this->set($key, $value);
+            return (object)$this->_data;
         }
-    */
+        $aResult = $this->findOne($iItemId);
+        if ( !$aResult )
+        {
+            return null;
+        }
+        return (object)$aResult->toArray();
+    }
+
+    public function __get($key)
+    {
+        return $this->get($key);
+    }
+
+    public function __set($key, $value)
+    {
+        $this->set($key, $value);
+    }
+
     public function __isset($key)
     {
         return isset($this->_data[$key]);
@@ -1209,7 +1838,7 @@ class FluentModel
      *
      * $VoodOrm = new VoodOrm($myPDO);
      * on table 'users'
-     * $Users = $VoodOrm->table("users");
+     * $Users = $VoodOrm->table('users');
      *
      * Or to call a table relationship
      * on table 'photos' where users can have many photos
@@ -1235,97 +1864,260 @@ class FluentModel
     public function __call($tablename, $args)
     {
         $_def = [
-            "relationship" => self::HAS_MANY, // The type of association: HAS_MANY | HAS_ONE
-            "foreignKey" => "", // the foreign key for the association
-            "localKey" => "", // localKey for the association
-            "where" => [], // Where condition
-            "sort" => "", // Sort of the result
-            "callback" => null, // A callback on the results
-            "model" => null, // An instance VoodOrm class as the class to interact with
-            "backref" => false // When true, it will query in the reverse direction
+            'relationship' => self::HAS_MANY, // The type of association: HAS_MANY | HAS_ONE
+            'foreignKey' => '', // the foreign key for the association
+            'localKey' => '', // localKey for the association
+            'where' => [], // Where condition
+            'sort' => '', // Sort of the result
+            'callback' => null, // A callback on the results
+            'model' => null, // An instance VoodOrm class as the class to interact with
+            'backref' => false // When true, it will query in the reverse direction
         ];
         $prop = array_merge($_def, $args);
-        if ( !$this->is_single ) {
-            return $prop["model"] ?: $this->table($tablename);
+        if ( !$this->_is_single )
+        {
+            return $prop['model'] ?: $this->table($tablename);
         }
 
-        switch ($prop["relationship"]) {
+        switch ($prop['relationship'])
+        {
             /**
              * OneToMany
              */
             default:
             case self::HAS_MANY:
 
-                $localKeyN      = ($prop["localKey"]) ?: $this->getPrimaryKeyname();
-                $foreignKeyN    = ($prop["foreignKey"]) ?: $this->getForeignKeyname();
-                $token          = $this->tokenize($tablename, $foreignKeyN.":".$prop["relationship"]);
-                if ( isset(self::$references[$token])) {
-                    return isset(self::$references[$token][$this->{$localKeyN}]) ? self::$references[$token][$this->{$localKeyN}]  : new ArrayIterator;
+                $localKeyN      = ($prop['localKey']) ?: $this->getPrimaryKeyname();
+                $foreignKeyN    = ($prop['foreignKey']) ?: $this->getForeignKeyname();
+                $token          = $this->tokenize($tablename, $foreignKeyN.':'.$prop['relationship']);
+                if ( isset(self::$_references[$token]) )
+                {
+                    return isset(self::$_references[$token][$this->{$localKeyN}]) ? self::$_references[$token][$this->{$localKeyN}]  : [];
                 }
-                $model = $prop["model"] ?: $this->table($tablename);
+                $model = $prop['model'] ?: $this->table($tablename);
                 // Backref (back reference). Reverse the query
-                if ($prop["backref"]) {
-                    if (isset($this->reference_keys[$foreignKeyN])) {
-                        $model->where($localKeyN, $this->reference_keys[$foreignKeyN]);
-                    }
-                } else {
-                    if (isset($this->reference_keys[$localKeyN])) {
-                        $model->where($foreignKeyN, $this->reference_keys[$localKeyN]);
+                if ($prop['backref'])
+                {
+                    if ( isset($this->_reference_keys[$foreignKeyN]) )
+                    {
+                        $model->where($localKeyN, $this->_reference_keys[$foreignKeyN]);
                     }
                 }
-                if($prop["where"]) {
-                    $model->where($prop["where"]);
+                else
+                {
+                    if (isset($this->_reference_keys[$localKeyN]))
+                    {
+                        $model->where($foreignKeyN, $this->_reference_keys[$localKeyN]);
+                    }
                 }
-                if ($prop["sort"]) {
-                    $model->orderBy($prop["sort"]);
+                if( $prop['where'] )
+                {
+                    $model->where($prop['where']);
+                }
+                if ( $prop['sort'] )
+                {
+                    $model->orderBy($prop['sort']);
                 }
 
-                self::$references[$token] = $model->find(function($rows) use ($model, $foreignKeyN, $prop) {
+                self::$_references[$token] = $model->find(function($rows) use ($model, $foreignKeyN, $prop) {
+
                     $results = [];
-                    /* @var ArrayIterator[] $results */
-                    foreach ($rows as $row) {
-                        if(!isset($results[$row[$foreignKeyN]])){
-                            $results[$row[$foreignKeyN]] = new ArrayIterator;
+                    /* @var array $results */
+                    foreach ($rows as $row)
+                    {
+                        if ( !isset($results[$row[$foreignKeyN]]) )
+                        {
+                            $results[$row[$foreignKeyN]] = [];
                         }
-                        $results[$row[$foreignKeyN]]->append(is_callable($prop["callback"])
-                                                            ? $prop["callback"]($row)
+                        $results[$row[$foreignKeyN]][]= (is_callable($prop['callback'])
+                                                            ? $prop['callback']($row)
                                                             : $model->fromArray($row));
                     }
                     return $results;
                 });
-                return isset(self::$references[$token][$this->{$localKeyN}])
-                            ? self::$references[$token][$this->{$localKeyN}]
-                            : new ArrayIterator;
+                return isset(self::$_references[$token][$this->{$localKeyN}])
+                            ? self::$_references[$token][$this->{$localKeyN}]
+                            : [];
                 break;
 
             case self::HAS_ONE:
-                $localKeyN = $prop["localKey"] ?: $this->formatKeyname($this->getStructure()["foreignKeyname"], $tablename);
+
+                $localKeyN = $prop['localKey'] ?: $this->formatKeyname($this->getStructure()['foreignKeyname'], $tablename);
                 if ( !isset($this->{$localKeyN}) || !$this->{$localKeyN} ) {
 
                     return null;
                 }
-                $model          = $prop["model"] ?: $this->table($tablename);
-                $foreignKeyN    = $prop["foreignKey"] ?: $model->getPrimaryKeyname();
-                $token          = $this->tokenize($tablename, $localKeyN . ":" . $prop["relationship"]);
-                if ( isset(self::$references[$token]) ) {
+                $model          = $prop['model'] ?: $this->table($tablename);
+                $foreignKeyN    = $prop['foreignKey'] ?: $model->getPrimaryKeyname();
+                $token          = $this->tokenize($tablename, $localKeyN . ':' . $prop['relationship']);
+                if ( isset(self::$_references[$token]) ) {
 
-                    return self::$references[$token][$this->{$localKeyN}];
+                    return self::$_references[$token][$this->{$localKeyN}];
                 }
-                if (isset($this->reference_keys[$localKeyN])) {
-                   $model->where($foreignKeyN, $this->reference_keys[$localKeyN]);
+                if (isset($this->_reference_keys[$localKeyN])) {
+                   $model->where($foreignKeyN, $this->_reference_keys[$localKeyN]);
                 }
                 // $callback isn't set
-                $callback = $prop["callback"];
-                self::$references[$token] = $model->find(function($rows) use ($model, $callback, $foreignKeyN) {
+                $callback = $prop['callback'];
+                self::$_references[$token] = $model->find(function($rows) use ($model, $callback, $foreignKeyN) {
                    $results = [];
                    foreach ($rows as $row) {
                         $results[$row[$foreignKeyN]] = is_callable($callback)  ? $callback($row) : $model->fromArray($row);
                    }
                    return $results;
                 });
-                return self::$references[$token][$this->{$localKeyN}];
+                return self::$_references[$token][$this->{$localKeyN}];
                 break;
         }
+    }
+
+    public function columns()
+    {
+        return $this->_columns;
+    }
+
+    public function skeleton()
+    {
+        $aSkeleton = [];
+        foreach ( $this->_columns as $column => $sType )
+        {
+            $aSkeleton[$column] = null;
+        }
+        return $aSkeleton;
+    }
+
+    public function getWhereIn($field, array $values, $type='string')
+    {
+        \Assert\that($field)->string()->notEmpty();
+        \Assert\that($values)->isArray();
+        \Assert\that($type)->inArray(['string', 'float', 'integer']);
+        if ( $type !== 'string' )
+        {
+            \Assert\that($values)->numeric();
+        }
+        if ( empty($values) )
+        {
+            return '';
+        }
+        foreach ( $values as $idx => $value )
+        {
+            switch ( $type )
+            {
+                case 'string':
+                    $values[$idx] = $this->_pdo->quote(\PDO::PARAM_STR);
+                    break;
+                case 'integer':
+                case 'float':
+                    $values[$idx] = $this->_pdo->quote(\PDO::PARAM_INT);
+                    break;
+            }
+        }
+        $sValues = implode(',', $values);
+        return <<<SQL
+          AND {$field} IN ({$sValues})
+SQL;
+    }
+
+    public function paginate(array $query=[])
+    {
+        $query = (object)$query;
+        if ( isset($query->_items) && is_numeric($query->_items) )
+        {
+            $this->limit($query->_items);
+            if ( isset($query->_page) && is_numeric($query->_page) )
+            {
+                $this->offset(($query->_page - 1) * $query->_items);
+            }
+        }
+        $columns = $this->columns();
+        if ( !empty($query->_order) && isset($columns[$query->_order]) )
+        {
+            $this->orderBy($query->_order);
+        }
+        if ( !empty($query->_fields) )
+        {
+            $select_fields     = [];
+            $query->_fields    = is_array($query->_fields) ? $query->_fields : explode('|', $query->_fields);
+            foreach ( $query->_fields as $idx => $field )
+            {
+                $alias = Utilities\StringUtils::before(':', $field);
+                $alias = !empty($alias) ? $alias : $this->_table_alias;
+                if ( $alias !== $this->_table_alias )
+                {
+                    throw new \Exception("Joined table aliases not supported yet");
+                }
+                $field = Utilities\StringUtils::after(':', $field, true);
+                $field = $field === '_display_field' ? $this->_display_column : $field;
+                if ( isset($columns[$field]) )
+                {
+                    $select_fields[] = "{$alias}.{$field}";
+                }
+            }
+            if ( !empty($select_fields) )
+            {
+                $this->select($select_fields);
+                $this->_aRequestedFields = $select_fields;
+            }
+        }
+        return $this;
+    }
+
+    public function filter(array $query=[])
+    {
+        $columns   = $this->columns();
+        $alias     = '';
+        foreach ( $query as $column => $sValue )
+        {
+            $alias = Utilities\StringUtils::before(':', $column);
+            $alias = !empty($alias) ? $alias : $this->_table_alias;
+            if ( $alias !== $this->_table_alias )
+            {
+                throw new \Exception("Joined table aliases not supported yet");
+            }
+            $field = Utilities\StringUtils::after(':', $column, true);
+            $field = $field === '_display_field' ? $this->_display_column : $field;
+            if ( isset($columns[$field]) && !empty($sValue) )
+            {
+                $column = "{$alias}.{$field}";
+                $this->_aFilterMeta[$column] = $sValue;
+                if ( mb_stripos($sValue, '|') !== false )
+                {
+                    $this->whereIn($column, explode('|', $sValue));
+                }
+                else
+                {
+                    $this->where($column, $sValue);
+                }
+            }
+        }
+
+        if ( !empty($query['_search']) )
+        {
+            $aStringColumns = array_filter($columns, function($sType){
+                return in_array($sType, ['varchar', 'text', 'enum']);
+            });
+            $aWhereLikes = [];
+            foreach ( $aStringColumns as $column => $sType )
+            {
+                $column        = "{$alias}.{$column}";
+                $aSearchTerms   = explode('|', $query['_search']);
+                foreach ( $aSearchTerms as $sTerm )
+                {
+                    $aWhereLikes[$column] = "%{$sTerm}%";
+                }
+            }
+            if ( empty($aWhereLikes) )
+            {
+                return $this;
+            }
+            $this->where([1=>1])->wrap()->_and();
+            foreach ( $aWhereLikes as $column => $sTerm )
+            {
+                $this->_or()->whereLike($column, $sTerm);
+            }
+            $this->wrap();
+        }
+        return $this;
     }
 
 /*******************************************************************************/
@@ -1338,24 +2130,25 @@ class FluentModel
      */
     public function reset()
     {
-        $this->where_parameters = [];
-        $this->select_fields = array('*');
-        $this->join_sources = [];
-        $this->where_conditions = [];
-        $this->limit = null;
-        $this->offset = null;
-        $this->order_by = [];
-        $this->group_by = [];
+        $this->_where_parameters = [];
+        $this->_select_fields = ['*'];
+        $this->_join_sources = [];
+        $this->_where_conditions = [];
+        $this->_limit = null;
+        $this->_offset = null;
+        $this->_order_by = [];
+        $this->_group_by = [];
         $this->_data = [];
         $this->_dirty_fields = [];
-        $this->is_fluent_query = true;
-        $this->and_or_operator = self::OPERATOR_AND;
-        $this->having = [];
-        $this->wrap_open = false;
-        $this->last_wrap_position = 0;
-        $this->debug_sql_query = false;
-        $this->pdo_stmt = null;
-        $this->is_single = false;
+        $this->_is_fluent_query = true;
+        $this->_and_or_operator = self::OPERATOR_AND;
+        $this->_having = [];
+        $this->_wrap_open = false;
+        $this->_last_wrap_position = 0;
+        $this->_debug_sql_query = false;
+        $this->_pdo_stmt = null;
+        $this->_is_single = false;
+        $this->_distinct = false;
         return $this;
     }
 
@@ -1367,9 +2160,9 @@ class FluentModel
      *          http://php.net/manual/en/function.strtotime.php
      * @return string YYYY-MM-DD HH:II:SS
      */
-    public static function NOW($datetime = "now")
+    public static function NOW($datetime = 'now')
     {
-        return (new DateTime($datetime ?: "now"))->format("Y-m-d H:i:s");
+        return (new DateTime($datetime ?: 'now'))->format('Y-m-d H:i:s');
     }
 
 
@@ -1385,7 +2178,7 @@ class FluentModel
      */
     public function debugSqlQuery($bool = true)
     {
-        $this->debug_sql_query = $bool;
+        $this->_debug_sql_query = $bool;
         return $this;
     }
 
@@ -1396,7 +2189,7 @@ class FluentModel
      */
     public function getSqlQuery()
     {
-        return $this->sql_query;
+        return $this->_sql_query;
     }
 
     /**
@@ -1406,20 +2199,20 @@ class FluentModel
      */
     public function getSqlParameters()
     {
-        return $this->sql_parameters;
+        return $this->_sql_parameters;
     }
 
 /*******************************************************************************/
     /**
      * Return a string containing the given number of question marks,
-     * separated by commas. Eg "?, ?, ?"
+     * separated by commas. Eg '?, ?, ?'
      *
-     * @param int - total of placeholder to inser
+     * @param int - total of placeholder to insert
      * @return string
      */
     protected function makePlaceholders($number_of_placeholders=1)
     {
-        return implode(", ", array_fill(0, $number_of_placeholders, "?"));
+        return implode(', ', array_fill(0, $number_of_placeholders, '?'));
     }
 
     /**
@@ -1441,9 +2234,9 @@ class FluentModel
      * @param  string   $suffix
      * @return string
      */
-    private function tokenize($key, $suffix = "")
+    private function tokenize($key, $suffix = '')
     {
-        return  $this->table_token.":$key:$suffix";
+        return  "{$this->_table_token}:{$key}:{$suffix}";
     }
 
     public function __clone()
@@ -1452,7 +2245,7 @@ class FluentModel
 
     public function __toString()
     {
-        return $this->is_single ? $this->getPK() : $this->table_name;
+        return $this->_is_single ? $this->getPK() : (string)$this->_table_name;
     }
 
     /**
@@ -1460,7 +2253,20 @@ class FluentModel
      * @param array $data
      * @return bool
      */
-    private function isArrayMultiDim(Array $data){
-        return (count($data) != count($data,COUNT_RECURSIVE));
+    private function isArrayMultiDim(Array $data)
+    {
+        return (count($data) != count($data, COUNT_RECURSIVE));
+    }
+
+    /**
+     * Get mysql time
+     *
+     * @return string
+     * @throws \Exception
+     */
+    public function getMysqlCurrentTime()
+    {
+        $oStmt = $this->query('SELECT NOW()', [], true);
+        return $oStmt->fetchColumn();
     }
 }
