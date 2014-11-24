@@ -7,8 +7,8 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "Mardix",
-            "homepage": "http://github.com/mardix",
+            "name": "Terry Cullen",
+            "homepage": "http://github.com/terah",
             "role": "Developer"
         }
     ],
@@ -16,6 +16,8 @@
         "php": ">=5.4.0"
     },
     "autoload": {
-        "psr-0": { "Voodoo": "src/" }
-    }    
+        "psr-4": {
+            "Terah\\FluentModel\\": "src/"
+        }
+    }
 }
