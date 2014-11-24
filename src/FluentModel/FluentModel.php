@@ -1,7 +1,7 @@
 <?php
 /**
  * -----------------------------------------------------------------------------
- * FluidModel
+ * FluentModel
  * -----------------------------------------------------------------------------
  * @author      Mardix (http://twitter.com/mardix)
  * @modified by Terry Cullen (http://terah.com.au)
@@ -12,17 +12,17 @@
  * @license     MIT
  * -----------------------------------------------------------------------------
  *
- * About FluidModel
+ * About FluentModel
  *
- * FluidModel is a fluent interface to pdo which functions as both a fluent select query API and a CRUD model class.
- * FluidModel is built on top of PDO and is well fit for small to mid-sized projects, where the emphasis
+ * FluentModel is a fluent interface to pdo which functions as both a fluent select query API and a CRUD model class.
+ * FluentModel is built on top of PDO and is well fit for small to mid-sized projects, where the emphasis
  * is on simplicity and rapid development rather than infinite flexibility and features.
  *
  * Learn more: https://github.com/mardix/VoodOrm
  *
  */
 
-namespace Terah\FluidModel;
+namespace Terah\FluentModel;
 
 
 use Closure,
@@ -30,9 +30,9 @@ use Closure,
     DateTime;
 
 
-class FluidModel
+class FluentModel
 {
-    const NAME              = "FluidModel";
+    const NAME              = "FluentModel";
     const VERSION           = "0.1";
 
     // RELATIONSHIP CONSTANT
@@ -102,7 +102,7 @@ class FluidModel
      *
      * @param  string   $tableName - Table name
      * @param  string   $alias     - The table alias name
-     * @return FluidModel
+     * @return FluentModel
      */
     public function table($tableName, $alias = "")
     {
@@ -127,7 +127,7 @@ class FluidModel
      * Set the table alias
      *
      * @param string $alias
-     * @return FluidModel
+     * @return FluentModel
      */
     public function setTableAlias($alias)
     {
@@ -145,7 +145,7 @@ class FluidModel
      * @param string $primaryKeyName - the primary key, ie: id
      * @param string $foreignKeyName - the foreign key as a pattern: %s_id,
      *                                  where %s will be substituted with the table name
-     * @return FluidModel
+     * @return FluentModel
      */
     public function setStructure($primaryKeyName = "id", $foreignKeyName = "%s_id")
     {
@@ -202,7 +202,7 @@ class FluidModel
      * @param bool      $return_as_pdo_stmt - true, it will return the PDOStatement
      *                                       false, it will return $this, which can be used for chaining
      *                                              or access the properties of the results
-     * @return FluidModel | \PDOStatement
+     * @return FluentModel | \PDOStatement
      */
     public function query($query, Array $parameters = [], $return_as_pdo_stmt = false)
     {
@@ -305,7 +305,7 @@ class FluidModel
      * Return one row
      *
      * @param  int      $id - use to fetch by primary key
-     * @return FluidModel
+     * @return FluentModel
      */
     public function findOne($id = null)
     {
@@ -328,7 +328,7 @@ class FluidModel
      *
      * @param array $data
      *
-     * @return FluidModel
+     * @return FluentModel
      */
     public function fromArray(Array $data)
     {
@@ -348,7 +348,7 @@ class FluidModel
      *
      * @param  mixed    $columns  - the column to select. Can be string or array of fields
      * @param  string   $alias - an alias to the column
-     * @return FluidModel
+     * @return FluentModel
      */
     public function select($columns = "*", $alias = null)
     {
@@ -368,7 +368,7 @@ class FluidModel
      * @param string $condition possibly containing ? or :name
      * @param mixed $parameters accepted by PDOStatement::execute or a scalar value
      * @param mixed ...
-     * @return FluidModel
+     * @return FluentModel
      */
     public function where($condition, $parameters = [])
     {
@@ -423,7 +423,7 @@ class FluidModel
     /**
      * Create an AND operator in the where clause
      *
-     * @return FluidModel
+     * @return FluentModel
      */
     public function _and()
     {
@@ -441,7 +441,7 @@ class FluidModel
     /**
      * Create an OR operator in the where clause
      *
-     * @return FluidModel
+     * @return FluentModel
      */
     public function _or()
     {
@@ -458,7 +458,7 @@ class FluidModel
     /**
      * To group multiple where clauses together.
      *
-     * @return FluidModel
+     * @return FluentModel
      */
     public function wrap()
     {
@@ -477,7 +477,7 @@ class FluidModel
      * Where Primary key
      *
      * @param  int  $id
-     * @return FluidModel
+     * @return FluentModel
      */
     public function wherePK($id)
     {
@@ -489,7 +489,7 @@ class FluidModel
      *
      * @param  string   $columnName
      * @param  mixed    $value
-     * @return FluidModel
+     * @return FluentModel
      */
     public function whereNot($columnName, $value)
     {
@@ -501,7 +501,7 @@ class FluidModel
      *
      * @param  string   $columnName
      * @param  mixed    $value
-     * @return FluidModel
+     * @return FluentModel
      */
     public function whereLike($columnName, $value)
     {
@@ -513,7 +513,7 @@ class FluidModel
      *
      * @param  string   $columnName
      * @param  mixed    $value
-     * @return FluidModel
+     * @return FluentModel
      */
     public function whereNotLike($columnName, $value)
     {
@@ -525,7 +525,7 @@ class FluidModel
      *
      * @param  string   $columnName
      * @param  mixed    $value
-     * @return FluidModel
+     * @return FluentModel
      */
     public function whereGt($columnName, $value)
     {
@@ -537,7 +537,7 @@ class FluidModel
      *
      * @param  string   $columnName
      * @param  mixed    $value
-     * @return FluidModel
+     * @return FluentModel
      */
     public function whereGte($columnName, $value)
     {
@@ -549,7 +549,7 @@ class FluidModel
      *
      * @param  string   $columnName
      * @param  mixed    $value
-     * @return FluidModel
+     * @return FluentModel
      */
     public function whereLt($columnName, $value)
     {
@@ -561,7 +561,7 @@ class FluidModel
      *
      * @param  string   $columnName
      * @param  mixed    $value
-     * @return FluidModel
+     * @return FluentModel
      */
     public function whereLte($columnName, $value)
     {
@@ -573,7 +573,7 @@ class FluidModel
      *
      * @param  string   $columnName
      * @param  Array    $values
-     * @return FluidModel
+     * @return FluentModel
      */
     public function whereIn($columnName, Array $values)
     {
@@ -585,7 +585,7 @@ class FluidModel
      *
      * @param  string   $columnName
      * @param  Array    $values
-     * @return FluidModel
+     * @return FluentModel
      */
     public function whereNotIn($columnName, Array $values)
     {
@@ -598,7 +598,7 @@ class FluidModel
      * WHERE $columnName IS NULL
      *
      * @param  string   $columnName
-     * @return FluidModel
+     * @return FluentModel
      */
     public function whereNull($columnName)
     {
@@ -609,7 +609,7 @@ class FluidModel
      * WHERE $columnName IS NOT NULL
      *
      * @param  string   $columnName
-     * @return FluidModel
+     * @return FluentModel
      */
     public function whereNotNull($columnName)
     {
@@ -632,7 +632,7 @@ class FluidModel
      *
      * @param  string   $columnName - The name of the column or an expression
      * @param  string   $ordering   (DESC | ASC)
-     * @return FluidModel
+     * @return FluentModel
      */
     public function orderBy($columnName, $ordering = "")
     {
@@ -645,7 +645,7 @@ class FluidModel
      * GROUP BY $columnName
      *
      * @param  string   $columnName
-     * @return FluidModel
+     * @return FluentModel
      */
     public function groupBy($columnName)
     {
@@ -660,7 +660,7 @@ class FluidModel
      *
      * @param  int      $limit
      * @param  int      $offset
-     * @return FluidModel
+     * @return FluentModel
      */
     public function limit($limit, $offset = null)
     {
@@ -688,7 +688,7 @@ class FluidModel
      * OFFSET $offset
      *
      * @param  int      $offset
-     * @return FluidModel
+     * @return FluentModel
      */
     public function offset($offset)
     {
@@ -715,7 +715,7 @@ class FluidModel
      * @param  string   $constraint    -> id = profile.user_id
      * @param  string   $table_alias   - The alias of the table name
      * @param  string   $join_operator - LEFT | INNER | etc...
-     * @return FluidModel
+     * @return FluentModel
      */
     public function join($table, $constraint, $table_alias = "", $join_operator = "")
     {
@@ -738,7 +738,7 @@ class FluidModel
      * @param  string   $table
      * @param  string   $constraint
      * @param  string   $table_alias
-     * @return FluidModel
+     * @return FluentModel
      */
     public function leftJoin($table, $constraint, $table_alias=null)
     {
@@ -879,7 +879,7 @@ class FluidModel
     /**
       * Detect if its a single row instance and reset it to PK
       *
-      * @return FluidModel
+      * @return FluentModel
       */
     protected function setSingleWhere()
     {
@@ -893,7 +893,7 @@ class FluidModel
     /**
       * Reset the where
       *
-      * @return FluidModel
+      * @return FluentModel
       */
     protected function resetWhere()
     {
@@ -912,7 +912,7 @@ class FluidModel
      * If a single row is inserted, it will return it's row instance
      *
      * @param  array    $data - data to populate
-     * @return FluidModel
+     * @return FluentModel
      */
     public function insert(Array $data)
     {
@@ -1050,7 +1050,7 @@ class FluidModel
      *
      * @param  mixed    $key
      * @param  mixed    $value
-     * @return FluidModel
+     * @return FluentModel
      */
     public function set($key, $value = null)
     {
@@ -1334,7 +1334,7 @@ class FluidModel
     /**
      * Reset fields
      *
-     * @return FluidModel
+     * @return FluentModel
      */
     public function reset()
     {
@@ -1381,7 +1381,7 @@ class FluidModel
      * and getSqlParameters to get the data
      *
      * @param bool $bool
-     * @return FluidModel
+     * @return FluentModel
      */
     public function debugSqlQuery($bool = true)
     {

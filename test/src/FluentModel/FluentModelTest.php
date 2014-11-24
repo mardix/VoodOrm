@@ -2,7 +2,7 @@
 
 namespace Voodoo;
 
-require_once dirname(__FILE__) . '/../../../src/FluidModel/VoodOrm.php';
+require_once dirname(__FILE__) . '/../../../src/FluentModel/VoodOrm.php';
 
 use PDO;
 
