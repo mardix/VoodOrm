@@ -1,5 +1,5 @@
 {
-    "name": "terah/fluid-model",
+    "name": "terah/fluent-model",
     "type": "library",
     "description": "VoodOrm is a micro-ORM which functions as both a fluent select query API and a CRUD model class.",
     "keywords": ["pdo","fluent query","pdo","mysql","sqlite","postgresql","orm"],
