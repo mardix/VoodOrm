@@ -29,7 +29,7 @@ use Closure;
 use PDO;
 use DateTime;
 use Utilities;
-
+use vakata\database\Exception;
 
 class FluentModel
 {
@@ -50,30 +50,30 @@ class FluentModel
     /* @var \PDO $_pdo */
     protected $_pdo                 = null;
     /* @var \PDOStatement $_pdo_stmt*/
-    private $_pdo_stmt              = null;
-    private $_table_token           = '';
-    private $_select_fields         = [];
-    private $_join_sources          = [];
-    private $_limit                 = null;
-    private $_offset                = null;
-    private $_order_by              = [];
-    private $_group_by              = [];
-    private $_where_parameters      = [];
-    private $_where_conditions      = [];
-    private $_and_or_operator       = self::OPERATOR_AND;
-    private $_having                = [];
-    private $_wrap_open             = false;
-    private $_last_wrap_position    = 0;
-    private $_is_fluent_query       = true;
-    private $_pdo_executed          = false;
-    private $_data                  = [];
-    private $_debug_sql_query       = false;
+    protected $_pdo_stmt              = null;
+    protected $_table_token           = '';
+    protected $_select_fields         = [];
+    protected $_join_sources          = [];
+    protected $_limit                 = null;
+    protected $_offset                = null;
+    protected $_order_by              = [];
+    protected $_group_by              = [];
+    protected $_where_parameters      = [];
+    protected $_where_conditions      = [];
+    protected $_and_or_operator       = self::OPERATOR_AND;
+    protected $_having                = [];
+    protected $_wrap_open             = false;
+    protected $_last_wrap_position    = 0;
+    protected $_is_fluent_query       = true;
+    protected $_pdo_executed          = false;
+    protected $_data                  = [];
+    protected $_debug_sql_query       = false;
 
-    private $_sql_query             = '';
-    private $_sql_parameters        = [];
-    private $_dirty_fields          = [];
-    private $_reference_keys        = [];
-    private static $_references     = [];
+    protected $_sql_query             = '';
+    protected $_sql_parameters        = [];
+    protected $_dirty_fields          = [];
+    protected $_reference_keys        = [];
+    protected static $_references     = [];
     protected $_distinct            = false;
     protected $_errors              = [];
 
@@ -87,6 +87,11 @@ class FluentModel
 
     protected $_read_only           = false;
     protected $_verbose             = false;
+    protected $_allow_meta_override = false;
+    protected $_filter_meta         = null;
+    protected $_requested_fields    = null;
+    protected $_log_queries         = false;
+
     // Table structure
     public $table_structure         = [
         'primaryKeyname'    => 'id',
@@ -94,7 +99,7 @@ class FluentModel
     ];
 
     /**
-     * @var \PDO[]
+     * @var array
      */
     protected static $_pdo_conns        = null;
     protected static $_model_namespace  = null;
@@ -108,7 +113,7 @@ class FluentModel
         foreach ( $config as $connection => $connection_config )
         {
             \Assert\that($connection_config)->keysExist(['host', 'host', 'port', 'name', 'user', 'driver', 'log_queries']);
-            static::addConnection($connection, static::getPdoFromConf($connection_config), $connection_config['log_queries']);
+            static::addConnection($connection, static::getPdoCallableFromConf($connection_config), $connection_config);
         }
         static::$_model_namespace = $model_namespace;
     }
@@ -132,7 +137,7 @@ class FluentModel
      *
      * @param $table_name
      *
-     * @return mixed
+     * @return FluentModel
      * @throws \Exception
      */
     public static function loadModel($table_name)
@@ -146,6 +151,11 @@ class FluentModel
         return $model_obj;
     }
 
+    /**
+     * @param $table_name
+     *
+     * @return string
+     */
     public static function getFullModelName($table_name)
     {
         return static::$_model_namespace . Utilities\Inflector::classify($table_name);
@@ -154,24 +164,42 @@ class FluentModel
     /**
      * Add a pdo connection to the pool
      *
-     * @param      $name
-     * @param PDO  $pdo
-     * @param bool $log_queries
+     * @param          $name
+     * @param Closure  $pdo_function
+     * @param array    $connection_config
      */
-    static public function addConnection($name, \PDO $pdo, $log_queries=false)
+    static public function addConnection($name, Closure $pdo_function, array $connection_config)
     {
         \Assert\that($name)->string()->notEmpty();
-        \Assert\that($log_queries)->boolean();
 
-        $pdo->log_queries = $log_queries;
-        static::$_pdo_conns[$name] = $pdo;
+        static::$_pdo_conns[$name] = [
+            'instance'      => null,
+            'loader'        => $pdo_function,
+            'config'        => $connection_config,
+        ];
     }
 
-    static public function getPdoConnection($name)
+    /**
+     * @param $name
+     *
+     * @return \Pdo
+     */
+    static public function getPdoConnection($name, $parameter='instance')
     {
         \Assert\that($name)->string()->notEmpty();
         \Assert\that(static::$_pdo_conns)->keyExists($name);
-        return static::$_pdo_conns[$name];
+        if ( ( is_null($parameter) || $parameter === 'instance' ) && is_null(static::$_pdo_conns[$name]['instance']) )
+        {
+            \Assert\that(static::$_pdo_conns[$name])->keyExists('loader');
+            $loader = static::$_pdo_conns[$name]['loader'];
+            static::$_pdo_conns[$name]['instance'] = $loader();
+        }
+        return is_null($parameter) ? static::$_pdo_conns[$name] : static::$_pdo_conns[$name][$parameter];
+    }
+
+    static public function getConnectionConfig($name)
+    {
+        return static::getPdoConnection($name, 'config');
     }
 
     /**
@@ -179,34 +207,183 @@ class FluentModel
      *
      * @param array $connection_config
      *
-     * @return null|PDO|\PDOOCI\PDO
+     * @return null|Closure
      */
-    static protected function getPdoFromConf(array $connection_config)
+    static protected function getPdoCallableFromConf(array $connection_config)
     {
         \Assert\that($connection_config)->keysExist(['host', 'port', 'name', 'pass', 'user', 'driver', 'log_queries']);
         \Assert\that($connection_config['driver'])->inArray(['PDOMYSQL', 'PDOOCI'], "Invalid database driver specified");
 
-        $host = $port = $name = $pass = $user = $driver = $log_queries = '';
+        $host = $port = $name = $pass = $user = $driver = '';
         extract($connection_config);
 
         switch ($driver)
         {
             case 'PDOMYSQL':
 
-                $pdo = new \PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8", $user, $pass);
-                $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-                $pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
-                $pdo->exec("SET NAMES utf8 COLLATE utf8_unicode_ci");
-                return $pdo;
+                return function() use ($host, $port, $name, $user, $pass) {
+
+                    $pdo = new \PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8", $user, $pass);
+                    $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+                    $pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
+                    $pdo->exec("SET NAMES utf8 COLLATE utf8_unicode_ci");
+                    return $pdo;
+                };
+
 
             case 'PDOOCI':
 
-                $pdo = new \PDOOCI\PDO("{$name};charset=utf8", $user, $pass);
-                $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-                return $pdo;
+                return function() use ($host, $port, $name, $user, $pass) {
+
+                    $pdo = new \PDOOCI\PDO("{$name};charset=utf8", $user, $pass);
+                    $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+                    return $pdo;
+                };
+
         }
         return null;
     }
+
+    /**
+     * @param $conn_ident
+     * @param $sql
+     * @param $params
+     *
+     * @return \PDOStatement
+     */
+    static public function fetchStmt($conn_ident, $sql, $params)
+    {
+        $pdo_conn   = static::getPdoConnection($conn_ident);
+        $stmt = $pdo_conn->prepare($sql);
+        $stmt->execute($params);
+        return $stmt;
+    }
+
+    static public function exec($conn_ident, $sql)
+    {
+        return static::getPdoConnection($conn_ident)->exec($sql);
+    }
+
+    /**
+     * @param     $conn_ident
+     * @param     $sql
+     * @param     $params
+     * @param int $fetchType
+     *
+     * @return \stdClass[]
+     */
+    static public function fetchAll($conn_ident, $sql, $params, $fetchType=\PDO::FETCH_OBJ)
+    {
+        return static::fetchStmt($conn_ident, $sql, $params)->fetchAll($fetchType);
+    }
+
+    /**
+     * @param      $conn_ident
+     * @param null $table
+     *
+     * @return array|mixed|null
+     * @throws \Exception
+     */
+    public static function getTableColumnMeta($conn_ident, $table=null)
+    {
+        $pdo_conn           = static::getPdoConnection($conn_ident);
+        $connection_config  = static::getConnectionConfig($conn_ident);
+        \Assert\that($connection_config)->keysExist(['host', 'port', 'name', 'pass', 'user', 'driver', 'log_queries']);
+        \Assert\that($connection_config['driver'])->inArray(['PDOMYSQL', 'PDOOCI'], "Invalid database driver specified");
+        $table_meta         = [];
+        switch ( $connection_config['driver'] )
+        {
+            case 'PDOMYSQL':
+
+                $pdo_conn->exec('FLUSH TABLES;');
+                $sql = <<<SQL
+                    SELECT
+                      c.TABLE_NAME                as table_name,
+                      c.COLUMN_NAME               as column_name,
+                      c.IS_NULLABLE               as is_nullable,
+                      c.DATA_TYPE                 as data_type,
+                      c.CHARACTER_MAXIMUM_LENGTH  as character_maximum_length,
+                      c.NUMERIC_PRECISION         as numeric_precision,
+                      c.COLUMN_TYPE               as column_type
+                    FROM information_schema.columns c
+                    LEFT JOIN information_schema.tables t ON c.TABLE_NAME = t.TABLE_NAME AND c.table_schema = t.table_schema
+                    WHERE t.table_schema = :database
+                    AND t.TABLE_TYPE = 'BASE TABLE';
+SQL;
+                $stmt = self::fetchStmt($conn_ident, $sql, ['database' => $connection_config['name']]);
+                while ( $column = $stmt->fetchObject() )
+                {
+                    $table_meta[$column->table_name][$column->column_name] = $column;
+                }
+                ksort($table_meta);
+                if ( !is_null($table) )
+                {
+                    return !empty($table_meta[$table]) ? [$table => $table_meta[$table]] : null;
+                }
+                return $table_meta;
+
+            default:
+
+                throw new \Exception('Not implemented');
+        }
+    }
+
+    /**
+     * @param      $conn_ident
+     * @param null $table
+     *
+     * @returns array
+     * @throws \Exception
+     */
+    public static function getForeignKeyMeta($conn_ident, $table=null)
+    {
+        $pdo_conn           = static::getPdoConnection($conn_ident);
+        $connection_config  = static::getConnectionConfig($conn_ident);
+        \Assert\that($connection_config)->keysExist(['host', 'port', 'name', 'pass', 'user', 'driver', 'log_queries']);
+        \Assert\that($connection_config['driver'])->inArray(['PDOMYSQL', 'PDOOCI'], "Invalid database driver specified");
+        $key_meta          = [];
+        switch ( $connection_config['driver'] )
+        {
+            case 'PDOMYSQL':
+
+                $pdo_conn->exec('FLUSH TABLES;');
+                $sql = <<<SQL
+                    SELECT
+                        i.TABLE_NAME              as table_name,
+                        i.CONSTRAINT_NAME         as constraint_name,
+                        k.REFERENCED_TABLE_NAME   as referenced_table_name,
+                        k.REFERENCED_COLUMN_NAME  as referenced_column_name,
+                        k.COLUMN_NAME             as column_name
+                    FROM information_schema.TABLE_CONSTRAINTS i
+                    LEFT JOIN information_schema.KEY_COLUMN_USAGE k ON i.CONSTRAINT_NAME = k.CONSTRAINT_NAME
+                    WHERE i.TABLE_SCHEMA = :database
+                    AND i.CONSTRAINT_TYPE = 'FOREIGN KEY';
+SQL;
+                while ( $key = self::fetchStmt($conn_ident, $sql, ['database' => $connection_config['name']])->fetchObject() )
+                {
+                    $key_meta['foreign_keys'][$key->table_name][] = $key;
+                }
+                ksort($key_meta);
+                if ( !is_null($table) )
+                {
+                    return !empty($key_meta[$table]) ? [$table => $key_meta[$table]] : null;
+                }
+                return $key_meta;
+
+            default:
+
+                throw new \Exception('Not implemented');
+        }
+    }
+
+    public static function getAllTableMeta($conn_ident, $table=null)
+    {
+        return [
+            'columns'       => static::getTableColumnMeta($conn_ident, $table),
+            'foreign_keys'  => static::getForeignKeyMeta($conn_ident, $table),
+        ];
+    }
+
 
 
     /**
@@ -216,11 +393,16 @@ class FluentModel
      */
     public function __construct(array $settings=[])
     {
+        $connection_ident   = !empty($settings['connection']) ? $settings['connection'] : $this->_connection;
+        $connection_details = static::getPdoConnection($connection_ident, null);
+        $settings           = array_merge($settings, $connection_details['config']);
         $this->_read_only   = !empty($settings['dry_run']) ? boolval($settings['dry_run']) : false;
         $this->_verbose     = !empty($settings['verbose']) ? boolval($settings['verbose']) : false;
+        $this->_log_queries = !empty($settings['log_queries']) ? $settings['log_queries'] : false;
         $primaryKeyName     = !empty($settings['private_key']) ? $settings['private_key'] : 'id';
         $foreignKeyName     = !empty($settings['foreign_key']) ? $settings['foreign_key'] : '%s_id';
-        $this->_pdo          = static::getPdoConnection($this->_connection);
+
+        $this->_pdo          = $connection_details['instance'];
         $this->setStructure($primaryKeyName, $foreignKeyName);
     }
 
@@ -372,6 +554,12 @@ class FluentModel
         return empty($this->_errors) ? true : false;
     }
 
+    public function allowMetaColumnOverride($allow=null)
+    {
+        $this->_allow_meta_override = $allow;
+        return $this;
+    }
+
     /**
      * Set the table alias
      *
@@ -477,7 +665,7 @@ class FluentModel
             return $this;
         }
         $sBuiltQuery = '';
-        if ( $this->_pdo->log_queries )
+        if ( $this->_log_queries )
         {
             $sBuiltQuery = $this->buildQuery($query, $parameters);
             Utilities\Logger::db_all($sBuiltQuery);
@@ -487,7 +675,7 @@ class FluentModel
             $this->_pdo_stmt = $this->_pdo->prepare($query);
             $this->_pdo_executed = $this->_pdo_stmt->execute($parameters);
             $secs_taken             = microtime(true)  - $secs_taken;
-            if ( $this->_pdo->log_queries && $secs_taken > 5 )
+            if ( $this->_log_queries && $secs_taken > 5 )
             {
                 $secs_taken = Utilities\StringUtils::secondsToWords(microtime(true)  - $secs_taken);
                 Utilities\Logger::db_all("SLOW QUERY - {$secs_taken}:\n{$sBuiltQuery}");
@@ -596,7 +784,7 @@ class FluentModel
      * @return array|\PDOStatement
      * @throws \Exception
      */
-    public function find(Closure $callback = null, $bAsStmt=false, $bAddSuccessCount=false)
+    public function find(Closure $callback = null, $as_pdo_stmt=false, $tally_success_cnt=false)
     {
         if ( $this->_is_fluent_query && $this->_pdo_stmt == null )
         {
@@ -612,7 +800,7 @@ class FluentModel
         {
             return false;
         }
-        if ( $bAddSuccessCount && is_callable($callback) )
+        if ( $tally_success_cnt && is_callable($callback) )
         {
             $success_cnt   = 0;
             $this->_pdo_stmt->setFetchMode(\PDO::FETCH_ASSOC);
@@ -625,7 +813,7 @@ class FluentModel
             }
             return $success_cnt;
         }
-        if ( $bAsStmt )
+        if ( $as_pdo_stmt )
         {
             if ( is_callable($callback) )
             {
@@ -814,7 +1002,14 @@ class FluentModel
         {
             $columns = array_keys($this->_columns);
         }
-        $this->_select_fields = is_array($columns) ? array_merge($this->_select_fields, $columns) : $columns;
+        if( is_array($columns) )
+        {
+            $this->_select_fields = array_merge($this->_select_fields, $columns);
+        }
+        else
+        {
+            $this->_select_fields[] = $columns;
+        }
         return $this;
     }
 
@@ -1296,7 +1491,7 @@ class FluentModel
      * @param array $columns
      * @return array
      */
-    private function prepareColumns(Array $columns)
+    private function prepareColumns(array $columns)
     {
         if ( ! $this->_table_alias )
         {
@@ -1309,7 +1504,11 @@ class FluentModel
             {
                 $newColumns = array_merge($this->prepareColumns(explode(',', $column)), $newColumns);
             }
-            else if (strpos($column, '.') == false && strpos(strtoupper($column), 'NULL') == false)
+            elseif ( preg_match('/^(AVG|SUM|MAX|MIN|COUNT)/', $column) )
+            {
+                $newColumns[] = trim($column);
+            }
+            elseif (strpos($column, '.') == false && strpos(strtoupper($column), 'NULL') == false)
             {
                 $column         = trim($column);
                 $newColumns[]   = preg_match('/^[0-9]/', $column) ? trim($column) : "{$this->_table_alias}.{$column}";
@@ -1448,18 +1647,20 @@ class FluentModel
         // check if the data is multi dimension for bulk insert
         $multi          = $this->isArrayMultiDim($data);
         $datafield      = array_keys($multi ? $data[0] : $data);
-        $data           = $multi ? $data : [$data];
-        foreach ( $data as $d )
+        foreach ( ($multi ? $data : [$data]) as $d )
         {
             $d                  = $this->beforeSave($d, static::SAVE_INSERT);
             $datafield          = array_keys($d);
             $question_marks[]   = '('  . $this->makePlaceholders(count($d)) . ')';
             $insert_values      = array_merge($insert_values, array_values($d));
         }
-        $data           = $multi ? $data : $data[0];
         $sql = "INSERT INTO {$this->_table_name} (" . implode(',', $datafield ) . ') ';
         $sql .= 'VALUES ' . implode(',', $question_marks);
         $this->query($sql, $insert_values);
+        foreach ( ($multi ? $data : [$data]) as $d )
+        {
+            $this->afterSave($d, static::SAVE_INSERT);
+        }
         // Return the SQL Query
         if ($this->_debug_sql_query)
         {
@@ -1529,9 +1730,10 @@ class FluentModel
         return $result ? $result->toArray() : false;
     }
 
-    public function beforeSave(array $data)
+    public function beforeSave(array $data, $type)
     {
-        return $data;
+        $data = $this->removeInvalidDataFields($data);
+        return $this->applyDefaults($data, $type);
     }
 
     /**
@@ -1539,7 +1741,7 @@ class FluentModel
      *
      * @return array
      */
-    public function afterSave(array $data)
+    public function afterSave(array $data, $type)
     {
         return $data;
     }
@@ -1552,6 +1754,58 @@ class FluentModel
     public function afterFind(array $data)
     {
         return $data;
+    }
+
+    /**
+     * Apply some default fields
+     *
+     * @param $data
+     * @param $type
+     *
+     * @return mixed
+     */
+    protected function applyDefaults($data, $type)
+    {
+        return $data;
+    }
+
+    public function removeInvalidDataFields($data)
+    {
+        $columns = $this->columns();
+        if ( empty($columns) )
+        {
+            return $data;
+        }
+        return array_intersect_key($data, $columns);
+    }
+
+    public function pagingMeta()
+    {
+        $model     = clone $this;
+        $limit     = intval($this->getLimit());
+        $offset    = intval($this->getOffset());
+        $total     = intval($model->offset(null)->limit(null)->count());
+        $aOrderBy   = !is_array($this->order_by) ? [] : $this->order_by;
+        $aPagingMeta = [
+            'items'     => $limit,
+            'page'      => $offset === 0 ? 1 : intval( $offset / $limit ) + 1,
+            'pages'     => $limit === 0 ? 1 : intval(ceil($total / $limit)),
+            'order'     => $aOrderBy,
+            'total'     => $total,
+            'filters'   => $this->_filter_meta,
+            'fields'    => $this->_requested_fields,
+        ];
+        return $aPagingMeta;
+    }
+
+    public function getQueryMeta()
+    {
+        return [
+            'limit'     => $this->getLimit(),
+            'offset'    => $this->getOffset(),
+            'next'      => null,
+            'previous'  => null,
+        ];
     }
 
 /*------------------------------------------------------------------------------
@@ -1572,7 +1826,7 @@ class FluentModel
         {
             $this->set($data);
         }
-        if ( ! ( $this->_dirty_fields = $this->beforeSave($this->_dirty_fields) ) )
+        if ( ! ( $this->_dirty_fields = $this->beforeSave($this->_dirty_fields, static::SAVE_UPDATE) ) )
         {
             return false;
         }
@@ -1597,7 +1851,7 @@ class FluentModel
         $query .= $this->getWhereString();
         $values = array_merge($values, $this->getWhereParameters());
         $this->query($query, $values);
-        $this->afterSave($data);
+        $this->afterSave($data, static::SAVE_UPDATE);
         // Return the SQL Query
         if ($this->_debug_sql_query)
         {
@@ -1971,9 +2225,9 @@ class FluentModel
         }
     }
 
-    public function columns()
+    public function columns($keys_only=false)
     {
-        return $this->_columns;
+        return $keys_only ? array_keys($this->_columns) : $this->_columns;
     }
 
     public function skeleton()
@@ -2130,25 +2384,27 @@ SQL;
      */
     public function reset()
     {
-        $this->_where_parameters = [];
-        $this->_select_fields = ['*'];
-        $this->_join_sources = [];
-        $this->_where_conditions = [];
-        $this->_limit = null;
-        $this->_offset = null;
-        $this->_order_by = [];
-        $this->_group_by = [];
-        $this->_data = [];
-        $this->_dirty_fields = [];
-        $this->_is_fluent_query = true;
-        $this->_and_or_operator = self::OPERATOR_AND;
-        $this->_having = [];
-        $this->_wrap_open = false;
-        $this->_last_wrap_position = 0;
-        $this->_debug_sql_query = false;
-        $this->_pdo_stmt = null;
-        $this->_is_single = false;
-        $this->_distinct = false;
+        $this->_where_parameters    = [];
+        $this->_select_fields       = ['*'];
+        $this->_join_sources        = [];
+        $this->_where_conditions    = [];
+        $this->_limit               = null;
+        $this->_offset              = null;
+        $this->_order_by            = [];
+        $this->_group_by            = [];
+        $this->_data                = [];
+        $this->_dirty_fields        = [];
+        $this->_is_fluent_query     = true;
+        $this->_and_or_operator     = self::OPERATOR_AND;
+        $this->_having              = [];
+        $this->_wrap_open           = false;
+        $this->_last_wrap_position  = 0;
+        $this->_debug_sql_query     = false;
+        $this->_pdo_stmt            = null;
+        $this->_is_single           = false;
+        $this->_distinct            = false;
+        $this->_requested_fields    = null;
+        $this->_filter_meta         = null;
         return $this;
     }
 
