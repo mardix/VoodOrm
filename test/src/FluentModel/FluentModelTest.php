@@ -2,7 +2,7 @@
 
 namespace Voodoo;
 
-require_once dirname(__FILE__) . '/../../../src/Voodoo/VoodOrm.php';
+require_once dirname(__FILE__) . '/../../../src/FluentModel/VoodOrm.php';
 
 use PDO;
 
@@ -18,14 +18,14 @@ class VoodOrmTest extends \PHPUnit_Framework_TestCase {
     private $VoodOrm;
     private $table = "voodorm";
 
-    
+
     protected function assertValidQueryBuilder($SQL, $voodOrm, $paramsCount = 0)
     {
         $this->assertEquals($SQL, $voodOrm->getSqlQuery());
-        
+
         $this->assertEquals($paramsCount, count($voodOrm->getSqlParameters()));
     }
-    
+
     /**
      * Sets up the fixture, for example, opens a network connection.
      * This method is called before a test is executed.
@@ -39,42 +39,42 @@ class VoodOrmTest extends \PHPUnit_Framework_TestCase {
     public function testTableName(){
         $this->assertEquals($this->table, $this->VoodOrm->table_name);
     }
-    
+
     public function testTable()
     {
         $this->assertInstanceOf("Voodoo\VoodOrm",$this->VoodOrm->table("new_table"));
     }
-    
+
     public function testSimpleSelect()
     {
         $q = $this->VoodOrm->debugSqlQuery();
         $q->select("id,name")->where("id", 123)->find();
-        
+
         $sql = "SELECT id,name FROM {$this->table} WHERE id = ?";
-        
+
         $this->assertValidQueryBuilder($sql, $q, 1);
-   }   
-   
+   }
+
     public function testSimpleUpdate()
     {
         $q = $this->VoodOrm->debugSqlQuery();
         $q->set("id","name")->where("id", 123)->update();
-        
+
         $sql = "UPDATE {$this->table} SET id = ? WHERE id = ?";
-        
+
         $this->assertValidQueryBuilder($sql, $q, 2);
-   }   
-   
+   }
+
     public function testSimpleDelete()
     {
         $q = $this->VoodOrm->debugSqlQuery();
         $q->where("id", 123)->delete();
-        
+
         $sql = "DELETE FROM {$this->table} WHERE id = ?";
-        
+
         $this->assertValidQueryBuilder($sql, $q, 1);
-   }    
-   
+   }
+
     public function testSimpleInsert()
     {
         $data = array(
@@ -84,12 +84,12 @@ class VoodOrmTest extends \PHPUnit_Framework_TestCase {
         );
         $q = $this->VoodOrm->debugSqlQuery();
         $q->insert($data);
-        
+
         $sql = "INSERT INTO {$this->table} (first_name,last_name,city) VALUES (?, ?, ?)";
-        
+
         $this->assertValidQueryBuilder($sql, $q, 3);
-   }  
-   
+   }
+
     public function testMassInsert()
     {
         $data = array(
@@ -97,157 +97,156 @@ class VoodOrmTest extends \PHPUnit_Framework_TestCase {
                 "first_name" => "name1",
                 "last_name" => "last name",
                 "city" => "city"
-            ), 
+            ),
             array(
                 "first_name" => "name2",
                 "last_name" => "last name",
                 "city" => "city"
-            ),             
+            ),
             array(
                 "first_name" => "name3",
                 "last_name" => "last name",
                 "city" => "city"
-            ),             
+            ),
         );
         $q = $this->VoodOrm->debugSqlQuery();
         $q->insert($data);
-        
-        $sql = "INSERT INTO {$this->table} (first_name,last_name,city) VALUES (?, ?, ?),(?, ?, ?),(?, ?, ?)";
-        
-        $this->assertValidQueryBuilder($sql, $q, 9);
-   }    
-   
 
-    public function testWhere() 
+        $sql = "INSERT INTO {$this->table} (first_name,last_name,city) VALUES (?, ?, ?),(?, ?, ?),(?, ?, ?)";
+
+        $this->assertValidQueryBuilder($sql, $q, 9);
+   }
+
+
+    public function testWhere()
     {
         $q = $this->VoodOrm->debugSqlQuery();
         $q->select("id,name")->where("id", 123)->find();
-        
+
         $sql = "SELECT id,name FROM {$this->table} WHERE id = ?";
-        
+
         $this->assertValidQueryBuilder($sql, $q, 1);
     }
 
 
-    public function testWhereNot() 
+    public function testWhereNot()
     {
         $q = $this->VoodOrm->debugSqlQuery();
         $q->select("id,name")->whereNot("id", 123)->find();
-        
+
         $sql = "SELECT id,name FROM {$this->table} WHERE id != ?";
-        
+
         $this->assertValidQueryBuilder($sql, $q, 1);
     }
 
-    public function testWhereLike() 
+    public function testWhereLike()
     {
         $q = $this->VoodOrm->debugSqlQuery();
         $q->select("id,name")->whereLike("name", "jose%")->find();
-        
+
         $sql = "SELECT id,name FROM {$this->table} WHERE name LIKE ?";
-        
+
         $this->assertValidQueryBuilder($sql, $q, 1);
     }
 
 
-    public function testWhereNotLike() 
+    public function testWhereNotLike()
     {
         $q = $this->VoodOrm->debugSqlQuery();
         $q->select("id,name")->whereNotLike("name", "jose%")->find();
-        
+
         $sql = "SELECT id,name FROM {$this->table} WHERE name NOT LIKE ?";
-        
+
         $this->assertValidQueryBuilder($sql, $q, 1);
     }
 
 
-    public function testWhereGt() 
+    public function testWhereGt()
     {
         $q = $this->VoodOrm->debugSqlQuery();
         $q->select("id,name")->whereGt("age", 18)->find();
-        
+
         $sql = "SELECT id,name FROM {$this->table} WHERE age > ?";
-        
+
         $this->assertValidQueryBuilder($sql, $q, 1);
     }
 
 
-    public function testWhereLt() 
+    public function testWhereLt()
     {
         $q = $this->VoodOrm->debugSqlQuery();
         $q->select("id,name")->whereLt("age", 18)->find();
-        
+
         $sql = "SELECT id,name FROM {$this->table} WHERE age < ?";
-        
+
         $this->assertValidQueryBuilder($sql, $q, 1);
     }
 
 
-    public function testWhereGte() 
+    public function testWhereGte()
     {
         $q = $this->VoodOrm->debugSqlQuery();
         $q->select("id,name")->whereGte("age", 18)->find();
-        
+
         $sql = "SELECT id,name FROM {$this->table} WHERE age >= ?";
-        
+
         $this->assertValidQueryBuilder($sql, $q, 1);
     }
 
 
-    public function testWhereLte() 
+    public function testWhereLte()
     {
         $q = $this->VoodOrm->debugSqlQuery();
         $q->select("id,name")->whereLte("age", 18)->find();
-        
+
         $sql = "SELECT id,name FROM {$this->table} WHERE age <= ?";
-        
+
         $this->assertValidQueryBuilder($sql, $q, 1);
     }
 
 
-    public function testWhereIn() 
+    public function testWhereIn()
     {
         $q = $this->VoodOrm->debugSqlQuery();
         $q->select("id,name")->whereIn("colors", array("blue", "yellow", "red"))->find();
-        
+
         $sql = "SELECT id,name FROM {$this->table} WHERE (colors IN (?, ?, ?))";
-        
+
         $this->assertValidQueryBuilder($sql, $q, 3);
     }
 
 
-    public function testWhereNotIn() 
+    public function testWhereNotIn()
     {
         $q = $this->VoodOrm->debugSqlQuery();
         $q->select("id,name")->whereNotIn("colors", array("blue", "yellow", "red"))->find();
-        
+
         $sql = "SELECT id,name FROM {$this->table} WHERE (colors NOT IN (?, ?, ?))";
-        
+
         $this->assertValidQueryBuilder($sql, $q, 3);
     }
 
 
-    public function testWhereNull() 
+    public function testWhereNull()
     {
         $q = $this->VoodOrm->debugSqlQuery();
         $q->select("id,name")->whereNull("name")->find();
-        
+
         $sql = "SELECT id,name FROM {$this->table} WHERE (name IS NULL)";
-        
+
         $this->assertValidQueryBuilder($sql, $q, 0);
     }
 
 
-    public function testWhereNotNull() 
+    public function testWhereNotNull()
     {
         $q = $this->VoodOrm->debugSqlQuery();
         $q->select("id,name")->whereNotNull("name")->find();
-        
+
         $sql = "SELECT id,name FROM {$this->table} WHERE (name IS NOT NULL)";
-        
+
         $this->assertValidQueryBuilder($sql, $q, 0);
     }
 
-    
+
 }
-    

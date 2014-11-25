@@ -1,5 +1,5 @@
 {
-    "name": "voodoophp/voodorm",
+    "name": "terah/fluent-model",
     "type": "library",
     "description": "VoodOrm is a micro-ORM which functions as both a fluent select query API and a CRUD model class.",
     "keywords": ["pdo","fluent query","pdo","mysql","sqlite","postgresql","orm"],
@@ -7,8 +7,8 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "Mardix",
-            "homepage": "http://github.com/mardix",
+            "name": "Terry Cullen",
+            "homepage": "http://github.com/terah",
             "role": "Developer"
         }
     ],
@@ -16,6 +16,8 @@
         "php": ">=5.4.0"
     },
     "autoload": {
-        "psr-0": { "Voodoo": "src/" }
-    }    
+        "psr-4": {
+            "Terah\\FluentModel\\": "src/"
+        }
+    }
 }
